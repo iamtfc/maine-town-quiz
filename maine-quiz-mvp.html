@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cumberland County Towns Quiz</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Crimson+Pro:ital,wght@0,400;0,600;1,400&display=swap');
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --ocean: #1a3a5c;
+    --deep: #0d2237;
+    --parchment: #f5efe0;
+    --gold: #c8a84b;
+    --correct: #3a7d44;
+    --wrong: #b5342a;
+    --reveal: #e8a020;
+  }
+
+  body {
+    font-family: 'Crimson Pro', Georgia, serif;
+    background: var(--deep);
+    color: var(--parchment);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 16px;
+  }
+
+  h1 {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: clamp(1.2rem, 4vw, 1.8rem);
+    color: var(--gold);
+    text-align: center;
+    margin-bottom: 4px;
+    letter-spacing: 0.02em;
+  }
+
+  .subtitle {
+    font-style: italic;
+    color: #a0b4c8;
+    font-size: 0.95rem;
+    margin-bottom: 12px;
+    text-align: center;
+  }
+
+  #prompt-card {
+    background: var(--ocean);
+    border: 1px solid var(--gold);
+    border-radius: 8px;
+    padding: 12px 24px;
+    text-align: center;
+    margin-bottom: 12px;
+    width: 100%;
+    max-width: 500px;
+  }
+
+  #prompt-card .label {
+    font-size: 0.8rem;
+    color: #a0b4c8;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 4px;
+  }
+
+  #town-name {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: clamp(1.4rem, 5vw, 2rem);
+    color: var(--parchment);
+  }
+
+  #feedback {
+    font-size: 1rem;
+    min-height: 1.4em;
+    text-align: center;
+    margin-bottom: 8px;
+    font-style: italic;
+    transition: color 0.3s;
+  }
+  #feedback.correct { color: #6dbf7a; }
+  #feedback.wrong { color: #e06b63; }
+
+  #map-container {
+    width: 100%;
+    max-width: 500px;
+    background: var(--ocean);
+    border: 1px solid #2a4a6a;
+    border-radius: 8px;
+    overflow: hidden;
+  }
+
+  #map-container svg {
+    width: 100%;
+    height: auto;
+    display: block;
+  }
+
+  .town-shape {
+    fill: #1e4a6e;
+    stroke: #4a8ab5;
+    stroke-width: 0.8;
+    cursor: pointer;
+    transition: fill 0.2s;
+  }
+  .town-shape:hover { fill: #2a5e8a; }
+  .town-shape.correct { fill: var(--correct); cursor: default; }
+  .town-shape.wrong { fill: var(--wrong); }
+  .town-shape.reveal { fill: var(--reveal); cursor: default; }
+  .town-shape.answered { cursor: default; }
+
+  #progress {
+    font-size: 0.85rem;
+    color: #a0b4c8;
+    text-align: center;
+    margin-top: 10px;
+  }
+
+  #next-btn {
+    display: none;
+    margin: 12px auto 0;
+    padding: 10px 28px;
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: 1rem;
+    background: var(--gold);
+    color: var(--deep);
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 700;
+  }
+  #next-btn:hover { background: #dfc060; }
+
+  #results {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    width: 100%;
+    max-width: 500px;
+    text-align: center;
+    padding-top: 32px;
+  }
+
+  #results h2 {
+    font-family: 'Playfair Display', Georgia, serif;
+    color: var(--gold);
+    font-size: 1.4rem;
+  }
+
+  .score-big {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: clamp(3rem, 12vw, 5rem);
+    color: var(--gold);
+    line-height: 1;
+  }
+
+  .score-label {
+    font-size: 1.1rem;
+    color: #a0b4c8;
+    font-style: italic;
+  }
+
+  #restart-btn {
+    padding: 12px 36px;
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: 1.1rem;
+    background: var(--gold);
+    color: var(--deep);
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 700;
+    margin-top: 8px;
+  }
+  #restart-btn:hover { background: #dfc060; }
+
+  #loading {
+    color: #a0b4c8;
+    font-style: italic;
+    text-align: center;
+    padding: 40px;
+  }
+
+  #error-msg {
+    display: none;
+    color: #e06b63;
+    font-style: italic;
+    text-align: center;
+    padding: 20px;
+    max-width: 400px;
+    line-height: 1.6;
+  }
+</style>
+</head>
+<body>
+
+<h1>Cumberland County</h1>
+<p class="subtitle">Town Identification Quiz</p>
+
+<div id="loading">Loading map data…</div>
+<div id="error-msg"></div>
+
+<div id="quiz-ui" style="display:none; width:100%; max-width:500px; flex-direction:column; align-items:center;">
+  <div id="prompt-card">
+    <div class="label">Click on</div>
+    <div id="town-name">—</div>
+  </div>
+  <div id="feedback"></div>
+  <div id="map-container"></div>
+  <div id="progress"></div>
+  <button id="next-btn" onclick="nextQuestion()">Next →</button>
+</div>
+
+<div id="results">
+  <h2>Session Complete</h2>
+  <div class="score-big" id="score-pct">—</div>
+  <div class="score-label" id="score-detail">—</div>
+  <button id="restart-btn" onclick="startQuiz()">Try Again</button>
+</div>
+
+<script>
+const DATA_URL = './Maine_Town_and_Townships_Boundary_Lines_Feature.geojson';
+
+let towns = [];
+let features = [];
+let order = [];
+let current = 0;
+let score = 0;
+let answered = false;
+let nameField = '';
+let svg, path;
+
+async function init() {
+  try {
+    const res = await fetch(DATA_URL);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const geo = await res.json();
+
+    const sample = geo.features[0].properties;
+    const keys = Object.keys(sample);
+    nameField = keys.find(k => /^(TOWN|NAME|TOWNNAME|TOWN_NAME|MUN_NAME|LABEL|MUNI_NAME)$/i.test(k)) || keys[0];
+    const countyField = keys.find(k => /^(COUNTY|COUNTY_NAM|COUNTY_NAME|CNTY_NAME|CO_NAME|COUNTYNM)$/i.test(k));
+
+    features = geo.features.filter(f => {
+      const p = f.properties;
+      const name = (p[nameField] || '').toUpperCase();
+      if (/UNORG|GRANT|TWP|TOWNSHIP|PLANTATION/.test(name)) return false;
+      if (countyField) {
+        return (p[countyField] || '').toUpperCase().includes('CUMBERLAND');
+      }
+      return true;
+    });
+
+    towns = [...new Set(features.map(f => f.properties[nameField]))].sort();
+
+    document.getElementById('loading').style.display = 'none';
+    buildMap();
+    startQuiz();
+  } catch(e) {
+    document.getElementById('loading').style.display = 'none';
+    const err = document.getElementById('error-msg');
+    err.style.display = 'block';
+    err.innerHTML = `Could not load map data.<br>Make sure <strong>Maine_Town_and_Townships_Boundary_Lines_Feature.geojson</strong> is in the same folder as this HTML file.<br><small>(${e.message})</small>`;
+  }
+}
+
+function buildMap() {
+  const container = document.getElementById('map-container');
+  const W = 500, H = 520;
+
+  const projection = d3.geoMercator().fitSize([W, H], { type: 'FeatureCollection', features });
+  path = d3.geoPath().projection(projection);
+
+  svg = d3.select(container).append('svg').attr('viewBox', `0 0 ${W} ${H}`);
+  svg.append('rect').attr('width', W).attr('height', H).attr('fill', '#0d2237');
+
+  svg.selectAll('.town-shape')
+    .data(features)
+    .enter().append('path')
+    .attr('class', 'town-shape')
+    .attr('d', path)
+    .attr('data-name', d => d.properties[nameField])
+    .on('click', handleClick);
+}
+
+function startQuiz() {
+  document.getElementById('results').style.display = 'none';
+  const ui = document.getElementById('quiz-ui');
+  ui.style.display = 'flex';
+
+  order = [...towns].sort(() => Math.random() - 0.5);
+  current = 0;
+  score = 0;
+
+  d3.selectAll('.town-shape').classed('correct wrong reveal answered', false);
+  showQuestion();
+}
+
+function showQuestion() {
+  answered = false;
+  document.getElementById('next-btn').style.display = 'none';
+  document.getElementById('feedback').textContent = '';
+  document.getElementById('feedback').className = '';
+  document.getElementById('town-name').textContent = order[current];
+  document.getElementById('progress').textContent = `${current + 1} of ${order.length}`;
+
+  d3.selectAll('.town-shape')
+    .filter(function() { return !d3.select(this).classed('correct'); })
+    .classed('wrong reveal answered', false);
+}
+
+function handleClick(event, d) {
+  if (answered) return;
+  answered = true;
+
+  const clicked = d.properties[nameField];
+  const target = order[current];
+  const el = d3.select(event.currentTarget);
+
+  if (clicked === target) {
+    el.classed('correct answered', true);
+    document.getElementById('feedback').textContent = '✓ Correct!';
+    document.getElementById('feedback').className = 'correct';
+    score++;
+  } else {
+    el.classed('wrong answered', true);
+    d3.selectAll('.town-shape')
+      .filter(function(fd) { return fd.properties[nameField] === target; })
+      .classed('reveal answered', true);
+    document.getElementById('feedback').textContent = `✗ That's ${clicked}. ${target} is highlighted in orange.`;
+    document.getElementById('feedback').className = 'wrong';
+  }
+
+  document.getElementById('next-btn').style.display = 'block';
+}
+
+function nextQuestion() {
+  current++;
+  if (current >= order.length) {
+    showResults();
+  } else {
+    showQuestion();
+  }
+}
+
+function showResults() {
+  document.getElementById('quiz-ui').style.display = 'none';
+  document.getElementById('results').style.display = 'flex';
+  const pct = Math.round((score / order.length) * 100);
+  document.getElementById('score-pct').textContent = `${pct}%`;
+  document.getElementById('score-detail').textContent = `${score} out of ${order.length} towns correct`;
+}
+
+init();
+</script>
+</body>
+</html>
