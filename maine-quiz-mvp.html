@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Cumberland County Towns Quiz</title>
+<title>Maine Towns Quiz</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Crimson+Pro:ital,wght@0,400;0,600;1,400&display=swap');
@@ -44,8 +44,45 @@
     font-style: italic;
     color: #a0b4c8;
     font-size: 0.95rem;
+    margin-bottom: 20px;
+    text-align: center;
+  }
+
+  #county-picker {
+    width: 100%;
+    max-width: 400px;
+  }
+
+  #county-picker h2 {
+    font-family: 'Playfair Display', Georgia, serif;
+    color: var(--gold);
+    font-size: 1.1rem;
     margin-bottom: 12px;
     text-align: center;
+    font-weight: 400;
+    font-style: italic;
+  }
+
+  .county-list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .county-list li a {
+    display: block;
+    padding: 8px 16px;
+    color: var(--parchment);
+    text-decoration: none;
+    font-size: 1.05rem;
+    border-left: 2px solid transparent;
+    transition: border-color 0.15s, color 0.15s;
+  }
+
+  .county-list li a:hover {
+    border-left-color: var(--gold);
+    color: var(--gold);
   }
 
   #prompt-card {
@@ -79,7 +116,6 @@
     text-align: center;
     margin-bottom: 8px;
     font-style: italic;
-    transition: color 0.3s;
   }
   #feedback.correct { color: #6dbf7a; }
   #feedback.wrong { color: #e06b63; }
@@ -93,11 +129,7 @@
     overflow: hidden;
   }
 
-  #map-container svg {
-    width: 100%;
-    height: auto;
-    display: block;
-  }
+  #map-container svg { width: 100%; height: auto; display: block; }
 
   .town-shape {
     fill: #1e4a6e;
@@ -119,7 +151,7 @@
     margin-top: 10px;
   }
 
-  #next-btn {
+  .btn {
     display: none;
     margin: 12px auto 0;
     padding: 10px 28px;
@@ -132,7 +164,15 @@
     cursor: pointer;
     font-weight: 700;
   }
-  #next-btn:hover { background: #dfc060; }
+  .btn:hover { background: #dfc060; }
+  .btn.visible { display: block; }
+
+  .btn-outline {
+    background: transparent;
+    color: var(--gold);
+    border: 1px solid var(--gold);
+  }
+  .btn-outline:hover { background: rgba(200,168,75,0.1); color: var(--gold); }
 
   #results {
     display: none;
@@ -164,25 +204,19 @@
     font-style: italic;
   }
 
-  #restart-btn {
-    padding: 12px 36px;
-    font-family: 'Playfair Display', Georgia, serif;
-    font-size: 1.1rem;
-    background: var(--gold);
-    color: var(--deep);
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-    font-weight: 700;
-    margin-top: 8px;
+  .results-btns {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    align-items: center;
   }
-  #restart-btn:hover { background: #dfc060; }
 
   #loading {
     color: #a0b4c8;
     font-style: italic;
     text-align: center;
     padding: 40px;
+    display: none;
   }
 
   #error-msg {
@@ -192,19 +226,52 @@
     text-align: center;
     padding: 20px;
     max-width: 400px;
-    line-height: 1.6;
+    line-height: 1.8;
   }
+
+  .back-link {
+    font-size: 0.85rem;
+    color: #a0b4c8;
+    text-decoration: none;
+    margin-bottom: 8px;
+    display: inline-block;
+    cursor: pointer;
+  }
+  .back-link:hover { color: var(--gold); }
 </style>
 </head>
 <body>
 
-<h1>Cumberland County</h1>
-<p class="subtitle">Town Identification Quiz</p>
+<h1>Maine Towns Quiz</h1>
+<p class="subtitle">Can you find it on the map?</p>
+
+<div id="county-picker">
+  <h2>Choose a county</h2>
+  <ul class="county-list">
+    <li><a href="#" onclick="loadCounty('Androscoggin');return false;">Androscoggin</a></li>
+    <li><a href="#" onclick="loadCounty('Aroostook');return false;">Aroostook</a></li>
+    <li><a href="#" onclick="loadCounty('Cumberland');return false;">Cumberland</a></li>
+    <li><a href="#" onclick="loadCounty('Franklin');return false;">Franklin</a></li>
+    <li><a href="#" onclick="loadCounty('Hancock');return false;">Hancock</a></li>
+    <li><a href="#" onclick="loadCounty('Kennebec');return false;">Kennebec</a></li>
+    <li><a href="#" onclick="loadCounty('Knox');return false;">Knox</a></li>
+    <li><a href="#" onclick="loadCounty('Lincoln');return false;">Lincoln</a></li>
+    <li><a href="#" onclick="loadCounty('Oxford');return false;">Oxford</a></li>
+    <li><a href="#" onclick="loadCounty('Penobscot');return false;">Penobscot</a></li>
+    <li><a href="#" onclick="loadCounty('Piscataquis');return false;">Piscataquis</a></li>
+    <li><a href="#" onclick="loadCounty('Sagadahoc');return false;">Sagadahoc</a></li>
+    <li><a href="#" onclick="loadCounty('Somerset');return false;">Somerset</a></li>
+    <li><a href="#" onclick="loadCounty('Waldo');return false;">Waldo</a></li>
+    <li><a href="#" onclick="loadCounty('Washington');return false;">Washington</a></li>
+    <li><a href="#" onclick="loadCounty('York');return false;">York</a></li>
+  </ul>
+</div>
 
 <div id="loading">Loading map data…</div>
 <div id="error-msg"></div>
 
 <div id="quiz-ui" style="display:none; width:100%; max-width:500px; flex-direction:column; align-items:center;">
+  <a class="back-link" onclick="showPicker()">← Choose another county</a>
   <div id="prompt-card">
     <div class="label">Click on</div>
     <div id="town-name">—</div>
@@ -212,102 +279,97 @@
   <div id="feedback"></div>
   <div id="map-container"></div>
   <div id="progress"></div>
-  <button id="next-btn" onclick="nextQuestion()">Next →</button>
+  <button id="next-btn" class="btn" onclick="nextQuestion()">Next →</button>
 </div>
 
 <div id="results">
-  <h2>Session Complete</h2>
+  <h2 id="results-county">Complete</h2>
   <div class="score-big" id="score-pct">—</div>
   <div class="score-label" id="score-detail">—</div>
-  <button id="restart-btn" onclick="startQuiz()">Try Again</button>
+  <div class="results-btns">
+    <button class="btn visible" onclick="startQuiz()">Try Again</button>
+    <button class="btn visible btn-outline" onclick="showPicker()">Choose Another County</button>
+  </div>
 </div>
 
 <script>
-const DATA_URL = './cumberland_full.geojson';
-
-let towns = [];
-let features = [];
-let order = [];
-let current = 0;
-let score = 0;
-let answered = false;
-let nameField = '';
+let towns = [], features = [], order = [];
+let current = 0, score = 0, answered = false;
+let currentCounty = '';
 let svg, path;
 
-async function init() {
+function showPicker() {
+  document.getElementById('county-picker').style.display = 'block';
+  document.getElementById('quiz-ui').style.display = 'none';
+  document.getElementById('results').style.display = 'none';
+  document.getElementById('loading').style.display = 'none';
+  document.getElementById('error-msg').style.display = 'none';
+}
+
+async function loadCounty(county) {
+  currentCounty = county;
+  document.getElementById('county-picker').style.display = 'none';
+  document.getElementById('quiz-ui').style.display = 'none';
+  document.getElementById('results').style.display = 'none';
+  document.getElementById('error-msg').style.display = 'none';
+  const loading = document.getElementById('loading');
+  loading.style.display = 'block';
+  loading.textContent = 'Loading ' + county + ' County…';
+
   try {
-    const res = await fetch(DATA_URL);
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const filename = county.toLowerCase().replace(/ /g, '_') + '.geojson';
+    const res = await fetch('./' + filename);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
     const geo = await res.json();
 
-    const sample = geo.features[0].properties;
-    const keys = Object.keys(sample);
-    nameField = keys.find(k => /^(TOWN|NAME|TOWNNAME|TOWN_NAME|MUN_NAME|LABEL|MUNI_NAME)$/i.test(k)) || keys[0];
-    const countyField = keys.find(k => /^(COUNTY|COUNTY_NAM|COUNTY_NAME|CNTY_NAME|CO_NAME|COUNTYNM)$/i.test(k));
-
     features = geo.features.filter(f => {
-      const p = f.properties;
-      const name = (p[nameField] || '').toUpperCase();
-      if (/UNORG|GRANT|TWP|TOWNSHIP|PLANTATION/.test(name)) return false;
-      if (countyField) {
-        return (p[countyField] || '').toUpperCase().includes('CUMBERLAND');
-      }
-      return true;
+      const name = (f.properties.TOWN || '').trim().toUpperCase();
+      return name !== '' && !/UNORG|GRANT|TWP|TOWNSHIP|PLANTATION/.test(name);
     });
 
-    towns = [...new Set(features.map(f => f.properties[nameField]))].sort();
-
-    document.getElementById('loading').style.display = 'none';
+    towns = [...new Set(features.map(f => f.properties.TOWN))].sort();
+    loading.style.display = 'none';
     buildMap();
     startQuiz();
   } catch(e) {
-    document.getElementById('loading').style.display = 'none';
+    loading.style.display = 'none';
     const err = document.getElementById('error-msg');
     err.style.display = 'block';
-    err.innerHTML = `Could not load map data.<br>Make sure <strong>Maine_Town_and_Townships_Boundary_Lines_Feature.geojson</strong> is in the same folder as this HTML file.<br><small>(${e.message})</small>`;
+    err.innerHTML = 'Could not load ' + county + ' County data.<br><small>(' + e.message + ')</small><br><br><a class="back-link" onclick="showPicker()">← Back to county list</a>';
   }
 }
 
 function buildMap() {
-  const container = document.getElementById('map-container');
+  document.getElementById('map-container').innerHTML = '';
   const W = 500, H = 520;
-
   const projection = d3.geoMercator().fitSize([W, H], { type: 'FeatureCollection', features });
   path = d3.geoPath().projection(projection);
-
-  svg = d3.select(container).append('svg').attr('viewBox', `0 0 ${W} ${H}`);
+  svg = d3.select('#map-container').append('svg').attr('viewBox', '0 0 ' + W + ' ' + H);
   svg.append('rect').attr('width', W).attr('height', H).attr('fill', '#0d2237');
-
   svg.selectAll('.town-shape')
-    .data(features)
-    .enter().append('path')
+    .data(features).enter().append('path')
     .attr('class', 'town-shape')
     .attr('d', path)
-    .attr('data-name', d => d.properties[nameField])
+    .attr('data-name', d => d.properties.TOWN)
     .on('click', handleClick);
 }
 
 function startQuiz() {
   document.getElementById('results').style.display = 'none';
-  const ui = document.getElementById('quiz-ui');
-  ui.style.display = 'flex';
-
+  document.getElementById('quiz-ui').style.display = 'flex';
   order = [...towns].sort(() => Math.random() - 0.5);
-  current = 0;
-  score = 0;
-
+  current = 0; score = 0;
   d3.selectAll('.town-shape').classed('correct wrong reveal answered', false);
   showQuestion();
 }
 
 function showQuestion() {
   answered = false;
-  document.getElementById('next-btn').style.display = 'none';
+  document.getElementById('next-btn').classList.remove('visible');
   document.getElementById('feedback').textContent = '';
   document.getElementById('feedback').className = '';
   document.getElementById('town-name').textContent = order[current];
-  document.getElementById('progress').textContent = `${current + 1} of ${order.length}`;
-
+  document.getElementById('progress').textContent = (current + 1) + ' of ' + order.length;
   d3.selectAll('.town-shape')
     .filter(function() { return !d3.select(this).classed('correct'); })
     .classed('wrong reveal answered', false);
@@ -316,11 +378,9 @@ function showQuestion() {
 function handleClick(event, d) {
   if (answered) return;
   answered = true;
-
-  const clicked = d.properties[nameField];
+  const clicked = d.properties.TOWN;
   const target = order[current];
   const el = d3.select(event.currentTarget);
-
   if (clicked === target) {
     el.classed('correct answered', true);
     document.getElementById('feedback').textContent = '✓ Correct!';
@@ -329,33 +389,28 @@ function handleClick(event, d) {
   } else {
     el.classed('wrong answered', true);
     d3.selectAll('.town-shape')
-      .filter(function(fd) { return fd.properties[nameField] === target; })
+      .filter(function(fd) { return fd.properties.TOWN === target; })
       .classed('reveal answered', true);
-    document.getElementById('feedback').textContent = `✗ That's ${clicked}. ${target} is highlighted in orange.`;
+    document.getElementById('feedback').textContent = '✗ That\'s ' + clicked + '. ' + target + ' is highlighted in orange.';
     document.getElementById('feedback').className = 'wrong';
   }
-
-  document.getElementById('next-btn').style.display = 'block';
+  document.getElementById('next-btn').classList.add('visible');
 }
 
 function nextQuestion() {
   current++;
-  if (current >= order.length) {
-    showResults();
-  } else {
-    showQuestion();
-  }
+  if (current >= order.length) showResults();
+  else showQuestion();
 }
 
 function showResults() {
   document.getElementById('quiz-ui').style.display = 'none';
   document.getElementById('results').style.display = 'flex';
+  document.getElementById('results-county').textContent = currentCounty + ' County Complete';
   const pct = Math.round((score / order.length) * 100);
-  document.getElementById('score-pct').textContent = `${pct}%`;
-  document.getElementById('score-detail').textContent = `${score} out of ${order.length} towns correct`;
+  document.getElementById('score-pct').textContent = pct + '%';
+  document.getElementById('score-detail').textContent = score + ' out of ' + order.length + ' towns correct';
 }
-
-init();
 </script>
 </body>
 </html>
