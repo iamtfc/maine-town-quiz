@@ -242,7 +242,7 @@
 </head>
 <body>
 
-<h1 id="quiz-heading">Maine Towns Quiz</h1>
+<h1>Maine Towns Quiz</h1>
 <p class="subtitle">Can you find it on the map?</p>
 
 <div id="county-picker">
@@ -272,6 +272,7 @@
 
 <div id="quiz-ui" style="display:none; width:100%; max-width:500px; flex-direction:column; align-items:center;">
   <a class="back-link" onclick="showPicker()">← Choose another county</a>
+  <div id="county-heading" style="font-family:'Playfair Display',Georgia,serif; color:var(--gold); font-size:1.2rem; margin-bottom:8px; text-align:center;"></div>
   <div id="prompt-card">
     <div class="label">Click on</div>
     <div id="town-name">—</div>
@@ -299,7 +300,6 @@ let currentCounty = '';
 let svg, path;
 
 function showPicker() {
-  document.getElementById('quiz-heading').textContent = 'Maine Towns Quiz';
   document.getElementById('county-picker').style.display = 'block';
   document.getElementById('quiz-ui').style.display = 'none';
   document.getElementById('results').style.display = 'none';
@@ -335,7 +335,7 @@ async function loadCounty(county) {
 
     towns = [...new Set(features.map(f => f.properties.TOWN))].sort();
     loading.style.display = 'none';
-    document.getElementById('quiz-heading').textContent = county + ' County';
+    document.getElementById('county-heading').textContent = county + ' County';
     buildMap();
     startQuiz();
   } catch(e) {
