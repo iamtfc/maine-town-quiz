@@ -323,8 +323,13 @@ async function loadCounty(county) {
     const geo = await res.json();
 
     features = geo.features.filter(f => {
-      const name = (f.properties.TOWN || '').trim().toUpperCase();
-      return name !== '' && !/UNORG|GRANT|TWP|TOWNSHIP|PLANTATION/.test(name);
+      const name = (f.properties.TOWN || '').trim();
+      if (!name) return false;
+      const upper = name.toUpperCase();
+      if (/UNORG|WELS|PATENT/.test(upper)) return false;
+      if (/ TWP$| TWP | TOWNSHIP| PLT$| PLT | PLANTATION|GRANT TWP|GRANT$/.test(upper)) return false;
+      if (/^T[A-Z0-9]+ R[A-Z0-9]+/.test(upper)) return false;
+      return true;
     });
 
     towns = [...new Set(features.map(f => f.properties.TOWN))].sort();
