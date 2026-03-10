@@ -242,7 +242,7 @@
 </head>
 <body>
 
-<h1>Maine Towns Quiz</h1>
+<h1 id="quiz-heading">Maine Towns Quiz</h1>
 <p class="subtitle">Can you find it on the map?</p>
 
 <div id="county-picker">
@@ -299,6 +299,7 @@ let currentCounty = '';
 let svg, path;
 
 function showPicker() {
+  document.getElementById('quiz-heading').textContent = 'Maine Towns Quiz';
   document.getElementById('county-picker').style.display = 'block';
   document.getElementById('quiz-ui').style.display = 'none';
   document.getElementById('results').style.display = 'none';
@@ -334,6 +335,7 @@ async function loadCounty(county) {
 
     towns = [...new Set(features.map(f => f.properties.TOWN))].sort();
     loading.style.display = 'none';
+    document.getElementById('quiz-heading').textContent = county + ' County';
     buildMap();
     startQuiz();
   } catch(e) {
