@@ -330,6 +330,7 @@ async function loadCounty(county) {
       if (/UNORG|WELS|PATENT/.test(upper)) return false;
       if (/ TWP$| TWP | TOWNSHIP| PLT$| PLT | PLANTATION|GRANT TWP|GRANT$/.test(upper)) return false;
       if (/^T[A-Z0-9]+ R[A-Z0-9]+/.test(upper)) return false;
+      if (f.properties.LAND === 'n') return false;
       return true;
     });
 
