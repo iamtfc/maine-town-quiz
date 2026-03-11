@@ -294,6 +294,59 @@
 </div>
 
 <script>
+// ---------------------------------------------------------------------------
+// FILTER CONFIGURATION
+// Edit these lists to control which places appear in the quiz.
+// ---------------------------------------------------------------------------
+
+// Never shown in any mode (administrative artifacts, not real places)
+const ALWAYS_EXCLUDE = new Set([
+  'Hancock County Island',
+  'Knox County Island',
+  'Lincoln County Island',
+  'Piscataquis County Island',
+  'Waldo County Island',
+  'Washington County Island',
+]);
+
+// Excluded in normal mode but would be included in hard mode
+const NORMAL_MODE_EXCLUDE = new Set([
+  // Franklin
+  'Township 6 North of Weld', 'Township D', 'Township E',
+  // Oxford
+  'C Surplus', 'Township C',
+  // Somerset
+  'Rockwood Strip T1 R1 NBKP', 'Rockwood Strip T2 R1 NBKP',
+]);
+
+// ---------------------------------------------------------------------------
+
+let HARD_MODE = false; // toggle for future hard mode
+
+function shouldInclude(f) {
+  const name = (f.properties.TOWN || '').trim();
+  if (!name) return false;
+  if (f.properties.LAND === 'n') return false;
+
+  if (ALWAYS_EXCLUDE.has(name)) return false;
+
+  const upper = name.toUpperCase();
+  if (/UNORG|PATENT/.test(upper)) return false;
+
+  if (!HARD_MODE) {
+    if (NORMAL_MODE_EXCLUDE.has(name)) return false;
+    if (/WELS/.test(upper)) return false;
+    if (/ TWP$| TWP | TOWNSHIP| PLT$| PLT | PLANTATION|GRANT TWP|GRANT$/.test(upper)) return false;
+    if (/^T[A-Z0-9]+ R[A-Z0-9]+/.test(upper)) return false;
+    if (/^T\d+\s/.test(upper)) return false;  // catches T## MD/ED/ND/SD BPP etc.
+    if (/SURPLUS$/.test(upper)) return false;  // catches C Surplus etc.
+  }
+
+  return true;
+}
+
+// ---------------------------------------------------------------------------
+
 let towns = [], features = [], order = [];
 let current = 0, score = 0, answered = false;
 let currentCounty = '';
@@ -323,16 +376,7 @@ async function loadCounty(county) {
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const geo = await res.json();
 
-    features = geo.features.filter(f => {
-      const name = (f.properties.TOWN || '').trim();
-      if (!name) return false;
-      const upper = name.toUpperCase();
-      if (/UNORG|WELS|PATENT/.test(upper)) return false;
-      if (/ TWP$| TWP | TOWNSHIP| PLT$| PLT | PLANTATION|GRANT TWP|GRANT$/.test(upper)) return false;
-      if (/^T[A-Z0-9]+ R[A-Z0-9]+/.test(upper)) return false;
-      if (f.properties.LAND === 'n') return false;
-      return true;
-    });
+    features = geo.features.filter(shouldInclude);
 
     towns = [...new Set(features.map(f => f.properties.TOWN))].sort();
     loading.style.display = 'none';
