@@ -22,7 +22,7 @@ A web-based geography quiz where users identify Maine towns by clicking on a map
 - All 16 county files are in the repo
 - Source: Maine GIS polygon boundary file (non-dissolved version for coastal detail)
 - Key property fields: `TOWN`, `COUNTY`, `TYPE`, `ISLAND`, `LAND`
-- `cumberland_full.geojson` is an older file — the individual county files are the ones in use
+- Individual county files are the ones in use
 
 ---
 
@@ -69,8 +69,6 @@ Maine GIS has both versions. The dissolved file was the first one we tried but w
 ```
 maine-town-quiz/
 ├── maine-quiz-mvp.html      # Main quiz file
-├── cumberland.geojson       # Old dissolved version (can delete)
-├── cumberland_full.geojson  # Old pre-split file (can delete)
 ├── androscoggin.geojson
 ├── aroostook.geojson
 ├── cumberland.geojson
