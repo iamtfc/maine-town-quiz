@@ -315,6 +315,15 @@ const ALWAYS_EXCLUDE = new Set([
   'Washington County Island',
 ]);
 
+// Always shown regardless of other filters (real communities that match exclusion patterns)
+const ALWAYS_INCLUDE = new Set([
+  'Matinicus Isle Plt',      // Knox - inhabited island
+  'Monhegan Island Plt',     // Lincoln - inhabited island
+  'Rangeley Plt',            // Franklin - real town
+  'The Forks Plt',           // Somerset - real town
+  'Grand Lake Stream Plt',   // Washington - real town
+]);
+
 // Excluded in normal mode but would be included in hard mode
 const NORMAL_MODE_EXCLUDE = new Set([
   // Franklin
@@ -334,6 +343,7 @@ function shouldInclude(f) {
   if (!name) return false;
   if (f.properties.LAND === 'n') return false;
 
+  if (ALWAYS_INCLUDE.has(name)) return true;
   if (ALWAYS_EXCLUDE.has(name)) return false;
 
   const upper = name.toUpperCase();
