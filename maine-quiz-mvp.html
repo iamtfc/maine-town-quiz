@@ -131,6 +131,12 @@
 
   #map-container svg { width: 100%; height: auto; display: block; }
 
+  .county-bg {
+    fill: #1a3a5c;
+    stroke: none;
+    pointer-events: none;
+  }
+
   .town-shape {
     fill: #1e4a6e;
     stroke: #4a8ab5;
@@ -347,7 +353,7 @@ function shouldInclude(f) {
 
 // ---------------------------------------------------------------------------
 
-let towns = [], features = [], order = [];
+let towns = [], features = [], allLandFeatures = [], order = [];
 let current = 0, score = 0, answered = false;
 let currentCounty = '';
 let svg, path;
@@ -371,11 +377,12 @@ async function loadCounty(county) {
   loading.textContent = 'Loading ' + county + ' County…';
 
   try {
-    const filename = county.toLowerCase().replace(/ /g, '_') + '.geojson';
-    const res = await fetch('./' + filename);
+    const base = county.toLowerCase().replace(/ /g, '_');
+    const res = await fetch('./' + base + '.geojson');
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const geo = await res.json();
 
+    allLandFeatures = geo.features.filter(f => f.properties.LAND === 'y');
     features = geo.features.filter(shouldInclude);
 
     towns = [...new Set(features.map(f => f.properties.TOWN))].sort();
@@ -394,10 +401,15 @@ async function loadCounty(county) {
 function buildMap() {
   document.getElementById('map-container').innerHTML = '';
   const W = 500, H = 520;
-  const projection = d3.geoMercator().fitSize([W, H], { type: 'FeatureCollection', features });
+  const fitFeatures = allLandFeatures.length ? allLandFeatures : features;
+  const projection = d3.geoMercator().fitSize([W, H], { type: 'FeatureCollection', features: fitFeatures });
   path = d3.geoPath().projection(projection);
   svg = d3.select('#map-container').append('svg').attr('viewBox', '0 0 ' + W + ' ' + H);
   svg.append('rect').attr('width', W).attr('height', H).attr('fill', '#0d2237');
+  svg.selectAll('.county-bg')
+    .data(allLandFeatures).enter().append('path')
+    .attr('class', 'county-bg')
+    .attr('d', path);
   svg.selectAll('.town-shape')
     .data(features).enter().append('path')
     .attr('class', 'town-shape')
