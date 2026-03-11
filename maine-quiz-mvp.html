@@ -390,7 +390,9 @@ function handleClick(event, d) {
   const target = order[current];
   const el = d3.select(event.currentTarget);
   if (clicked === target) {
-    el.classed('correct answered', true);
+    d3.selectAll('.town-shape')
+      .filter(function(fd) { return fd.properties.TOWN === clicked; })
+      .classed('correct answered', true);
     document.getElementById('feedback').textContent = '✓ Correct!';
     document.getElementById('feedback').className = 'correct';
     score++;
