@@ -63,26 +63,35 @@
     font-style: italic;
   }
 
-  .county-list {
-    list-style: none;
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
+  #picker-map {
+    width: 100%;
+    max-width: 500px;
+    background: var(--ocean);
+    border: 4px solid #a0b4c8;
+    border-radius: 8px;
+    overflow: hidden;
+    cursor: pointer;
   }
 
-  .county-list li a {
-    display: block;
-    padding: 8px 16px;
+  #picker-map svg { width: 100%; height: auto; display: block; }
+
+  .county-shape {
+    fill: #4e6e50;
+    stroke: #7B9E7D;
+    stroke-width: 0.8;
+    transition: fill 0.15s;
+    cursor: pointer;
+  }
+
+  .county-shape:hover { fill: #a8c9aa; }
+
+  #county-label {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: clamp(1.4rem, 5vw, 2rem);
     color: var(--parchment);
-    text-decoration: none;
-    font-size: 1.05rem;
-    border-left: 2px solid transparent;
-    transition: border-color 0.15s, color 0.15s;
-  }
-
-  .county-list li a:hover {
-    border-left-color: var(--gold);
-    color: var(--gold);
+    text-align: center;
+    min-height: 1.4em;
+    margin-top: 8px;
   }
 
   #prompt-card {
@@ -261,24 +270,8 @@
 
 <div id="county-picker">
   <h2>Choose a county</h2>
-  <ul class="county-list">
-    <li><a href="#" onclick="loadCounty('Androscoggin');return false;">Androscoggin</a></li>
-    <li><a href="#" onclick="loadCounty('Aroostook');return false;">Aroostook</a></li>
-    <li><a href="#" onclick="loadCounty('Cumberland');return false;">Cumberland</a></li>
-    <li><a href="#" onclick="loadCounty('Franklin');return false;">Franklin</a></li>
-    <li><a href="#" onclick="loadCounty('Hancock');return false;">Hancock</a></li>
-    <li><a href="#" onclick="loadCounty('Kennebec');return false;">Kennebec</a></li>
-    <li><a href="#" onclick="loadCounty('Knox');return false;">Knox</a></li>
-    <li><a href="#" onclick="loadCounty('Lincoln');return false;">Lincoln</a></li>
-    <li><a href="#" onclick="loadCounty('Oxford');return false;">Oxford</a></li>
-    <li><a href="#" onclick="loadCounty('Penobscot');return false;">Penobscot</a></li>
-    <li><a href="#" onclick="loadCounty('Piscataquis');return false;">Piscataquis</a></li>
-    <li><a href="#" onclick="loadCounty('Sagadahoc');return false;">Sagadahoc</a></li>
-    <li><a href="#" onclick="loadCounty('Somerset');return false;">Somerset</a></li>
-    <li><a href="#" onclick="loadCounty('Waldo');return false;">Waldo</a></li>
-    <li><a href="#" onclick="loadCounty('Washington');return false;">Washington</a></li>
-    <li><a href="#" onclick="loadCounty('York');return false;">York</a></li>
-  </ul>
+  <div id="picker-map"></div>
+  <div id="county-label"></div>
 </div>
 
 <div id="loading">Loading map data…</div>
@@ -558,6 +551,32 @@ function showResults() {
   document.getElementById('score-pct').textContent = pct + '%';
   document.getElementById('score-detail').textContent = score + ' out of ' + order.length + ' towns correct';
 }
+
+async function buildPickerMap() {
+  const res = await fetch('./counties.geojson');
+  const raw = await res.json();
+  const geo = { ...raw, features: fixWinding(raw.features) };
+  const W = 500, H = 560;
+  const projection = d3.geoMercator().fitExtent([[16, 16], [W - 16, H - 16]], geo);
+  const pickerPath = d3.geoPath().projection(projection);
+  const pickerSvg = d3.select('#picker-map').append('svg').attr('viewBox', '0 0 ' + W + ' ' + H);
+  pickerSvg.append('rect').attr('width', W).attr('height', H).attr('fill', '#0d2237');
+  pickerSvg.selectAll('.county-shape')
+    .data(geo.features).enter().append('path')
+    .attr('class', 'county-shape')
+    .attr('d', pickerPath)
+    .on('mouseover', function(event, d) {
+      document.getElementById('county-label').textContent = d.properties.COUNTY;
+    })
+    .on('mouseout', function() {
+      document.getElementById('county-label').textContent = '';
+    })
+    .on('click', function(event, d) {
+      loadCounty(d.properties.COUNTY);
+    });
+}
+
+buildPickerMap();
 </script>
 </body>
 </html>
