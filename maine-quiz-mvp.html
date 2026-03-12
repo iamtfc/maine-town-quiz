@@ -15,9 +15,9 @@
     --deep: #0d2237;
     --parchment: #f5efe0;
     --gold: #c8a84b;
-    --correct: #3a7d44;
-    --wrong: #b5342a;
-    --reveal: #e8a020;
+    --correct: #c8a84b;
+    --wrong: #7a2820;
+    --reveal: #5cb87a;
   }
 
   body {
@@ -87,7 +87,7 @@
 
   #prompt-card {
     background: var(--ocean);
-    border: 1px solid var(--gold);
+    border: 4px solid #a0b4c8;
     border-radius: 8px;
     padding: 12px 24px;
     text-align: center;
@@ -111,7 +111,7 @@
   }
 
   #feedback {
-    font-size: 1rem;
+    font-size: 1.3rem;
     min-height: 1.4em;
     text-align: center;
     margin-bottom: 8px;
@@ -124,7 +124,7 @@
     width: 100%;
     max-width: 500px;
     background: var(--ocean);
-    border: 1px solid #2a4a6a;
+    border: 4px solid #a0b4c8;
     border-radius: 8px;
     overflow: hidden;
   }
@@ -132,19 +132,19 @@
   #map-container svg { width: 100%; height: auto; display: block; }
 
   .county-bg {
-    fill: #1a3a5c;
+    fill: #3a5c3c;
     stroke: none;
     pointer-events: none;
   }
 
   .town-shape {
-    fill: #1e4a6e;
-    stroke: #4a8ab5;
+    fill: #4e6e50;
+    stroke: #7B9E7D;
     stroke-width: 0.8;
     cursor: pointer;
     transition: fill 0.2s;
   }
-  .town-shape:hover { fill: #2a5e8a; }
+  .town-shape.hovered { fill: #a8c9aa; }
   .town-shape.correct { fill: var(--correct); cursor: default; }
   .town-shape.wrong { fill: var(--wrong); }
   .town-shape.reveal { fill: var(--reveal); cursor: default; }
@@ -412,7 +412,7 @@ function buildMap() {
   document.getElementById('map-container').innerHTML = '';
   const W = 500, H = 520;
   const fitFeatures = allLandFeatures.length ? allLandFeatures : features;
-  const projection = d3.geoMercator().fitSize([W, H], { type: 'FeatureCollection', features: fitFeatures });
+  const projection = d3.geoMercator().fitExtent([[24, 24], [W - 24, H - 24]], { type: 'FeatureCollection', features: fitFeatures });
   path = d3.geoPath().projection(projection);
   svg = d3.select('#map-container').append('svg').attr('viewBox', '0 0 ' + W + ' ' + H);
   svg.append('rect').attr('width', W).attr('height', H).attr('fill', '#0d2237');
@@ -425,7 +425,16 @@ function buildMap() {
     .attr('class', 'town-shape')
     .attr('d', path)
     .attr('data-name', d => d.properties.TOWN)
+    .on('mouseover', function(event, d) {
+      const name = d.properties.TOWN;
+      d3.selectAll('.town-shape').filter(fd => fd.properties.TOWN === name).classed('hovered', true);
+    })
+    .on('mouseout', function(event, d) {
+      const name = d.properties.TOWN;
+      d3.selectAll('.town-shape').filter(fd => fd.properties.TOWN === name).classed('hovered', false);
+    })
     .on('click', handleClick);
+
 }
 
 function startQuiz() {
@@ -467,7 +476,7 @@ function handleClick(event, d) {
     d3.selectAll('.town-shape')
       .filter(function(fd) { return fd.properties.TOWN === target; })
       .classed('reveal answered', true);
-    document.getElementById('feedback').textContent = '✗ That\'s ' + clicked + '. ' + target + ' is highlighted in orange.';
+    document.getElementById('feedback').textContent = '✗ That\'s ' + clicked + '. ' + target + ' is highlighted in green.';
     document.getElementById('feedback').className = 'wrong';
   }
   document.getElementById('next-btn').classList.add('visible');
