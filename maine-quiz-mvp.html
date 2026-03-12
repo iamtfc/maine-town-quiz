@@ -572,7 +572,9 @@ async function buildPickerMap() {
       document.getElementById('county-label').textContent = '';
     })
     .on('click', function(event, d) {
-      loadCounty(d.properties.COUNTY);
+      const county = d.properties.COUNTY;
+      document.getElementById('county-label').textContent = county;
+      setTimeout(() => loadCounty(county), 350);
     });
 }
 
