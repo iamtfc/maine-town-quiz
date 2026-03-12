@@ -15,9 +15,9 @@
     --deep: #0d2237;
     --parchment: #f5efe0;
     --gold: #c8a84b;
-    --correct: #c8a84b;
+    --correct: #5cb87a;
     --wrong: #7a2820;
-    --reveal: #5cb87a;
+    --reveal: #c8a84b;
   }
 
   body {
@@ -136,6 +136,14 @@
     stroke: none;
     pointer-events: none;
   }
+
+  .lake-shape {
+    fill: #2a6fa8;
+    fill-opacity: 0.65;
+    stroke: none;
+    pointer-events: none;
+  }
+
 
   .town-shape {
     fill: #4e6e50;
@@ -364,9 +372,43 @@ function shouldInclude(f) {
 // ---------------------------------------------------------------------------
 
 let towns = [], features = [], allLandFeatures = [], order = [];
+let lakesFeatures = [], allLakesData = null;
 let current = 0, score = 0, answered = false;
 let currentCounty = '';
 let svg, path;
+
+function fixWinding(features) {
+  return features.map(f => {
+    const geom = f.geometry;
+    if (!geom) return f;
+    const rev = coords => coords.map(ring => [...ring].reverse());
+    const fixed = geom.type === 'Polygon'
+      ? { ...geom, coordinates: rev(geom.coordinates) }
+      : geom.type === 'MultiPolygon'
+        ? { ...geom, coordinates: geom.coordinates.map(rev) }
+        : geom;
+    return { ...f, geometry: fixed };
+  });
+}
+
+async function loadLakesData() {
+  if (allLakesData) return;
+  try {
+    const res = await fetch('./lakes.geojson');
+    const data = await res.json();
+    allLakesData = fixWinding(data.features || []);
+  } catch(e) {
+    allLakesData = [];
+  }
+}
+
+function filterLakesForCounty(featureList) {
+  const countyFC = { type: 'FeatureCollection', features: featureList };
+  return (allLakesData || []).filter(f => {
+    const centroid = d3.geoCentroid(f);
+    return d3.geoContains(countyFC, centroid);
+  });
+}
 
 function showPicker() {
   document.getElementById('county-picker').style.display = 'block';
@@ -394,12 +436,21 @@ async function loadCounty(county) {
 
     allLandFeatures = geo.features.filter(f => f.properties.LAND === 'y');
     features = geo.features.filter(shouldInclude);
-
     towns = [...new Set(features.map(f => f.properties.TOWN))].sort();
+
+    lakesFeatures = [];
     loading.style.display = 'none';
     document.getElementById('county-heading').textContent = county + ' County';
     buildMap();
     startQuiz();
+
+    // Load lakes in background — update map when ready
+    const ref = allLandFeatures.length ? allLandFeatures : features;
+    loadLakesData().then(() => {
+      if (currentCounty !== county) return;
+      lakesFeatures = filterLakesForCounty(ref);
+      updateOverlays();
+    });
   } catch(e) {
     loading.style.display = 'none';
     const err = document.getElementById('error-msg');
@@ -415,13 +466,15 @@ function buildMap() {
   const projection = d3.geoMercator().fitExtent([[24, 24], [W - 24, H - 24]], { type: 'FeatureCollection', features: fitFeatures });
   path = d3.geoPath().projection(projection);
   svg = d3.select('#map-container').append('svg').attr('viewBox', '0 0 ' + W + ' ' + H);
+
   svg.append('rect').attr('width', W).attr('height', H).attr('fill', '#0d2237');
-  svg.selectAll('.county-bg')
-    .data(allLandFeatures).enter().append('path')
-    .attr('class', 'county-bg')
-    .attr('d', path);
-  svg.selectAll('.town-shape')
-    .data(features).enter().append('path')
+
+  svg.append('g').attr('class', 'layer-land')
+    .selectAll('.county-bg').data(allLandFeatures).enter().append('path')
+    .attr('class', 'county-bg').attr('d', path);
+
+  svg.append('g').attr('class', 'layer-towns')
+    .selectAll('.town-shape').data(features).enter().append('path')
     .attr('class', 'town-shape')
     .attr('d', path)
     .attr('data-name', d => d.properties.TOWN)
@@ -435,6 +488,15 @@ function buildMap() {
     })
     .on('click', handleClick);
 
+  svg.append('g').attr('class', 'layer-lakes')
+    .selectAll('.lake-shape').data(lakesFeatures).enter().append('path')
+    .attr('class', 'lake-shape').attr('d', path);
+
+}
+
+function updateOverlays() {
+  svg.select('.layer-lakes').selectAll('.lake-shape').data(lakesFeatures).enter()
+    .append('path').attr('class', 'lake-shape').attr('d', path);
 }
 
 function startQuiz() {
@@ -476,7 +538,7 @@ function handleClick(event, d) {
     d3.selectAll('.town-shape')
       .filter(function(fd) { return fd.properties.TOWN === target; })
       .classed('reveal answered', true);
-    document.getElementById('feedback').textContent = '✗ That\'s ' + clicked + '. ' + target + ' is highlighted in green.';
+    document.getElementById('feedback').textContent = '✗ That\'s ' + clicked + '. ' + target + ' is highlighted in gold.';
     document.getElementById('feedback').className = 'wrong';
   }
   document.getElementById('next-btn').classList.add('visible');
