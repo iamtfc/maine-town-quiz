@@ -60,7 +60,6 @@
     margin-bottom: 12px;
     text-align: center;
     font-weight: 400;
-    font-style: italic;
   }
 
   #picker-map {
@@ -100,7 +99,7 @@
     border-radius: 8px;
     padding: 12px 24px;
     text-align: center;
-    margin-bottom: 12px;
+    margin-bottom: 4px;
     width: 100%;
     max-width: 500px;
   }
@@ -121,10 +120,9 @@
 
   #feedback {
     font-size: 1.3rem;
-    min-height: 1.4em;
+    min-height: 1em;
     text-align: center;
-    margin-bottom: 8px;
-    font-style: italic;
+    margin-bottom: 4px;
   }
   #feedback.correct { color: #6dbf7a; }
   #feedback.wrong { color: #e06b63; }
@@ -168,10 +166,11 @@
   .town-shape.answered { cursor: default; }
 
   #progress {
-    font-size: 0.85rem;
+    font-size: 1rem;
     color: #a0b4c8;
     text-align: center;
     margin-top: 10px;
+    margin-bottom: 16px;
   }
 
   .btn {
@@ -224,7 +223,6 @@
   .score-label {
     font-size: 1.1rem;
     color: #a0b4c8;
-    font-style: italic;
   }
 
   .results-btns {
@@ -236,7 +234,6 @@
 
   #loading {
     color: #a0b4c8;
-    font-style: italic;
     text-align: center;
     padding: 40px;
     display: none;
@@ -245,7 +242,6 @@
   #error-msg {
     display: none;
     color: #e06b63;
-    font-style: italic;
     text-align: center;
     padding: 20px;
     max-width: 400px;
@@ -253,7 +249,7 @@
   }
 
   .back-link {
-    font-size: 0.85rem;
+    font-size: 1rem;
     color: #a0b4c8;
     text-decoration: none;
     margin-bottom: 8px;
@@ -278,15 +274,14 @@
 <div id="error-msg"></div>
 
 <div id="quiz-ui" style="display:none; width:100%; max-width:500px; flex-direction:column; align-items:center;">
-  <a class="back-link" onclick="showPicker()">← Choose another county</a>
-  <div id="county-heading" style="font-family:'Playfair Display',Georgia,serif; color:var(--gold); font-size:1.2rem; margin-bottom:8px; text-align:center;"></div>
+  <div id="county-heading" style="font-family:'Playfair Display',Georgia,serif; color:var(--gold); font-size:1.6rem; margin-bottom:8px; text-align:center;"></div>
   <div id="prompt-card">
-    <div class="label">Click on</div>
     <div id="town-name">—</div>
   </div>
   <div id="feedback"></div>
   <div id="map-container"></div>
   <div id="progress"></div>
+  <a class="back-link" onclick="showPicker()">← Choose another county</a>
   <button id="next-btn" class="btn" onclick="nextQuestion()">Next →</button>
 </div>
 
