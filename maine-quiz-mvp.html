@@ -166,11 +166,10 @@
   .town-shape.answered { cursor: default; }
 
   #progress {
-    font-size: 1rem;
-    color: #a0b4c8;
-    text-align: center;
+    width: 100%;
+    max-width: 500px;
     margin-top: 10px;
-    margin-bottom: 16px;
+    margin-bottom: 8px;
   }
 
   .btn {
@@ -195,6 +194,31 @@
     border: 1px solid var(--gold);
   }
   .btn-outline:hover { background: rgba(200,168,75,0.1); color: var(--gold); }
+  #next-btn { margin-top: 6px; }
+
+  #progress-bar-track {
+    width: 100%;
+    height: 8px;
+    background: var(--ocean);
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 4px;
+  }
+
+  #progress-bar-fill {
+    height: 100%;
+    background: #a0b4c8;
+    border-radius: 4px;
+    transition: width 0.3s ease;
+    width: 0%;
+  }
+
+  #progress-count {
+    font-size: 0.85rem;
+    color: #a0b4c8;
+    text-align: center;
+  }
+  #picker-btn { margin-top: 24px; margin-bottom: 24px; }
 
   #results {
     display: none;
@@ -280,9 +304,11 @@
   </div>
   <div id="feedback"></div>
   <div id="map-container"></div>
-  <div id="progress"></div>
-  <button class="btn visible btn-outline" onclick="showPicker()">← Choose Another County</button>
+  <div id="progress">
+    <div id="progress-bar-track"><div id="progress-bar-fill"></div></div>
+  </div>
   <button id="next-btn" class="btn" onclick="nextQuestion()">Next →</button>
+  <button id="picker-btn" class="btn visible btn-outline" onclick="showPicker()">← Choose Another County</button>
 </div>
 
 <div id="results">
@@ -502,7 +528,8 @@ function showQuestion() {
   document.getElementById('feedback').textContent = '';
   document.getElementById('feedback').className = '';
   document.getElementById('town-name').textContent = order[current];
-  document.getElementById('progress').textContent = (current + 1) + ' of ' + order.length;
+  const pctDone = Math.round((current / order.length) * 100);
+  document.getElementById('progress-bar-fill').style.width = pctDone + '%';
   d3.selectAll('.town-shape')
     .filter(function() { return !d3.select(this).classed('correct'); })
     .classed('wrong reveal answered', false);
@@ -511,6 +538,7 @@ function showQuestion() {
 function handleClick(event, d) {
   if (answered) return;
   answered = true;
+  document.getElementById('progress-bar-fill').style.width = Math.round(((current + 1) / order.length) * 100) + '%';
   const clicked = d.properties.TOWN;
   const target = order[current];
   const el = d3.select(event.currentTarget);
