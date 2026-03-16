@@ -151,6 +151,14 @@
     pointer-events: none;
   }
 
+  .river-shape {
+    fill: none;
+    stroke: #2a6fa8;
+    stroke-opacity: 0.75;
+    stroke-width: 1.2;
+    pointer-events: none;
+  }
+
 
   .town-shape {
     fill: #4e6e50;
@@ -194,7 +202,8 @@
     border: 1px solid var(--gold);
   }
   .btn-outline:hover { background: rgba(200,168,75,0.1); color: var(--gold); }
-  #next-btn { margin-top: 6px; }
+  #next-btn { display: block; visibility: hidden; margin-top: 6px; }
+  #next-btn.visible { visibility: visible; }
 
   #progress-bar-track {
     width: 100%;
@@ -387,6 +396,8 @@ function shouldInclude(f) {
 
 let towns = [], features = [], allLandFeatures = [], order = [];
 let lakesFeatures = [], allLakesData = null;
+let riversFeatures = [], allRiversData = null;
+let allCountiesData = null;
 let current = 0, score = 0, answered = false;
 let currentCounty = '';
 let svg, path;
@@ -416,11 +427,37 @@ async function loadLakesData() {
   }
 }
 
-function filterLakesForCounty(featureList) {
-  const countyFC = { type: 'FeatureCollection', features: featureList };
+async function loadRiversData() {
+  if (allRiversData) return;
+  try {
+    const res = await fetch('./rivers.geojson');
+    const data = await res.json();
+    allRiversData = data.features || [];
+  } catch(e) {
+    allRiversData = [];
+  }
+}
+
+function getCountyOutline(county) {
+  if (!allCountiesData) return null;
+  return allCountiesData.find(f => f.properties.COUNTY === county) || null;
+}
+
+function filterLakesForCounty(county) {
+  const outline = getCountyOutline(county);
+  if (!outline) return [];
   return (allLakesData || []).filter(f => {
     const centroid = d3.geoCentroid(f);
-    return d3.geoContains(countyFC, centroid);
+    return d3.geoContains(outline, centroid);
+  });
+}
+
+function filterRiversForCounty(county) {
+  const outline = getCountyOutline(county);
+  if (!outline) return [];
+  return (allRiversData || []).filter(f => {
+    const centroid = d3.geoCentroid(f);
+    return d3.geoContains(outline, centroid);
   });
 }
 
@@ -453,16 +490,17 @@ async function loadCounty(county) {
     towns = [...new Set(features.map(f => f.properties.TOWN))].sort();
 
     lakesFeatures = [];
+    riversFeatures = [];
     loading.style.display = 'none';
     document.getElementById('county-heading').textContent = county + ' County';
     buildMap();
     startQuiz();
 
-    // Load lakes in background — update map when ready
-    const ref = allLandFeatures.length ? allLandFeatures : features;
-    loadLakesData().then(() => {
+    // Load lakes and rivers in background — update map when ready
+    Promise.all([loadLakesData(), loadRiversData()]).then(() => {
       if (currentCounty !== county) return;
-      lakesFeatures = filterLakesForCounty(ref);
+      lakesFeatures = filterLakesForCounty(county);
+      riversFeatures = filterRiversForCounty(county);
       updateOverlays();
     });
   } catch(e) {
@@ -493,6 +531,7 @@ function buildMap() {
     .attr('d', path)
     .attr('data-name', d => d.properties.TOWN)
     .on('mouseover', function(event, d) {
+      if (answered) return;
       const name = d.properties.TOWN;
       d3.selectAll('.town-shape').filter(fd => fd.properties.TOWN === name).classed('hovered', true);
     })
@@ -502,6 +541,7 @@ function buildMap() {
     })
     .on('click', handleClick);
 
+  svg.append('g').attr('class', 'layer-rivers');
   svg.append('g').attr('class', 'layer-lakes')
     .selectAll('.lake-shape').data(lakesFeatures).enter().append('path')
     .attr('class', 'lake-shape').attr('d', path);
@@ -509,6 +549,8 @@ function buildMap() {
 }
 
 function updateOverlays() {
+  svg.select('.layer-rivers').selectAll('.river-shape').data(riversFeatures).enter()
+    .append('path').attr('class', 'river-shape').attr('d', path);
   svg.select('.layer-lakes').selectAll('.lake-shape').data(lakesFeatures).enter()
     .append('path').attr('class', 'lake-shape').attr('d', path);
 }
@@ -538,6 +580,7 @@ function showQuestion() {
 function handleClick(event, d) {
   if (answered) return;
   answered = true;
+  d3.selectAll('.town-shape').classed('hovered', false);
   document.getElementById('progress-bar-fill').style.width = Math.round(((current + 1) / order.length) * 100) + '%';
   const clicked = d.properties.TOWN;
   const target = order[current];
@@ -579,6 +622,7 @@ async function buildPickerMap() {
   const res = await fetch('./counties.geojson');
   const raw = await res.json();
   const geo = { ...raw, features: fixWinding(raw.features) };
+  allCountiesData = geo.features;
   const W = 500, H = 560;
   const projection = d3.geoMercator().fitExtent([[16, 16], [W - 16, H - 16]], geo);
   const pickerPath = d3.geoPath().projection(projection);
