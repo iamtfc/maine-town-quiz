@@ -82,7 +82,7 @@
     cursor: pointer;
   }
 
-  .county-shape:hover { fill: #a8c9aa; }
+  .county-shape.hovered { fill: #a8c9aa; }
 
   #county-label {
     font-family: 'Playfair Display', Georgia, serif;
@@ -633,12 +633,15 @@ async function buildPickerMap() {
     .attr('class', 'county-shape')
     .attr('d', pickerPath)
     .on('mouseover', function(event, d) {
+      d3.select(this).classed('hovered', true);
       document.getElementById('county-label').textContent = d.properties.COUNTY;
     })
     .on('mouseout', function() {
+      d3.select(this).classed('hovered', false);
       document.getElementById('county-label').textContent = '';
     })
     .on('click', function(event, d) {
+      d3.selectAll('.county-shape').classed('hovered', false);
       const county = d.properties.COUNTY;
       document.getElementById('county-label').textContent = county;
       setTimeout(() => loadCounty(county), 350);
