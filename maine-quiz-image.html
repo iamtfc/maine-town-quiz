@@ -1,0 +1,708 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Maine Town Quiz — Name That Town</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Crimson+Pro:ital,wght@0,400;0,600;1,400&display=swap');
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --ocean: #1a3a5c;
+    --deep: #0d2237;
+    --parchment: #f5efe0;
+    --gold: #c8a84b;
+    --correct: #5cb87a;
+    --wrong: #7a2820;
+    --reveal: #c8a84b;
+  }
+
+  body {
+    font-family: 'Crimson Pro', Georgia, serif;
+    background: var(--deep);
+    color: var(--parchment);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 16px;
+  }
+
+  h1 {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: clamp(1.2rem, 4vw, 1.8rem);
+    color: var(--gold);
+    text-align: center;
+    margin-bottom: 4px;
+    letter-spacing: 0.02em;
+  }
+
+  .subtitle {
+    font-style: italic;
+    color: #a0b4c8;
+    font-size: 0.95rem;
+    margin-bottom: 20px;
+    text-align: center;
+  }
+
+  /* County picker */
+  #county-picker { width: 100%; max-width: 400px; }
+
+  #county-picker h2 {
+    font-family: 'Playfair Display', Georgia, serif;
+    color: var(--gold);
+    font-size: 1.1rem;
+    margin-bottom: 12px;
+    text-align: center;
+    font-weight: 400;
+  }
+
+  #picker-map {
+    width: 100%;
+    max-width: 500px;
+    background: var(--ocean);
+    border: 4px solid #a0b4c8;
+    border-radius: 8px;
+    overflow: hidden;
+    cursor: pointer;
+  }
+
+  #picker-map svg { width: 100%; height: auto; display: block; }
+
+  .county-shape {
+    fill: #4e6e50;
+    stroke: #7B9E7D;
+    stroke-width: 0.8;
+    transition: fill 0.15s;
+    cursor: pointer;
+  }
+  .county-shape.hovered { fill: #a8c9aa; }
+
+  #county-label {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: clamp(1.4rem, 5vw, 2rem);
+    color: var(--parchment);
+    text-align: center;
+    min-height: 1.4em;
+    margin-top: 8px;
+  }
+
+  /* Map */
+  #map-container {
+    width: 100%;
+    max-width: 500px;
+    background: var(--ocean);
+    border: 4px solid #a0b4c8;
+    border-radius: 8px;
+    overflow: hidden;
+    margin-bottom: 10px;
+  }
+  #map-container svg { width: 100%; height: auto; display: block; }
+
+  .county-bg { fill: #3a5c3c; stroke: none; pointer-events: none; }
+  .lake-shape { fill: #2a6fa8; fill-opacity: 0.65; stroke: none; pointer-events: none; }
+  .river-shape { fill: none; stroke: #2a6fa8; stroke-opacity: 0.75; stroke-width: 1.2; pointer-events: none; }
+
+  .town-shape {
+    fill: #4e6e50;
+    stroke: #7B9E7D;
+    stroke-width: 0.8;
+    cursor: default;
+  }
+  .town-shape.target  { fill: var(--gold); }
+  .town-shape.correct { fill: var(--correct); }
+  .town-shape.wrong   { fill: var(--wrong); }
+
+  /* Autocomplete input */
+  .input-wrapper {
+    position: relative;
+    width: 100%;
+    max-width: 500px;
+  }
+
+  #guess-input {
+    width: 100%;
+    padding: 12px 16px;
+    font-family: 'Crimson Pro', Georgia, serif;
+    font-size: 1.1rem;
+    background: var(--ocean);
+    color: var(--parchment);
+    border: 2px solid #a0b4c8;
+    border-radius: 6px;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  #guess-input:focus { border-color: var(--gold); }
+  #guess-input:disabled { opacity: 0.5; cursor: default; }
+
+  #autocomplete-list {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: var(--deep);
+    border: 1px solid #a0b4c8;
+    border-top: none;
+    border-radius: 0 0 6px 6px;
+    z-index: 100;
+    max-height: 220px;
+    overflow-y: auto;
+  }
+  #autocomplete-list.open { display: block; }
+
+  .ac-item {
+    padding: 9px 16px;
+    cursor: pointer;
+    font-family: 'Crimson Pro', Georgia, serif;
+    font-size: 1rem;
+    color: var(--parchment);
+    border-bottom: 1px solid rgba(160,180,200,0.15);
+  }
+  .ac-item:last-child { border-bottom: none; }
+  .ac-item:hover, .ac-item.active { background: var(--ocean); color: var(--gold); }
+
+  /* Feedback */
+  #feedback {
+    font-size: 1.15rem;
+    min-height: 1.4em;
+    text-align: center;
+    margin-top: 8px;
+    margin-bottom: 4px;
+  }
+  #feedback.correct { color: #6dbf7a; }
+  #feedback.wrong   { color: #e06b63; }
+
+  /* Progress */
+  #progress { width: 100%; max-width: 500px; margin-top: 10px; margin-bottom: 8px; }
+  #progress-bar-track {
+    width: 100%; height: 8px; background: var(--ocean);
+    border-radius: 4px; overflow: hidden; margin-bottom: 4px;
+  }
+  #progress-bar-fill {
+    height: 100%; background: #a0b4c8; border-radius: 4px;
+    transition: width 0.3s ease; width: 0%;
+  }
+  #progress-count { font-size: 0.85rem; color: #a0b4c8; text-align: center; }
+
+  /* Buttons */
+  .btn {
+    display: none;
+    margin: 8px auto 0;
+    padding: 10px 28px;
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: 1rem;
+    background: var(--gold);
+    color: var(--deep);
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 700;
+  }
+  .btn:hover { background: #dfc060; }
+  .btn.visible { display: block; }
+
+  .btn-outline {
+    background: transparent;
+    color: var(--gold);
+    border: 1px solid var(--gold);
+  }
+  .btn-outline:hover { background: rgba(200,168,75,0.1); color: var(--gold); }
+
+  #next-btn { display: block; visibility: hidden; margin-top: 6px; }
+  #next-btn.visible { visibility: visible; }
+
+  /* Results */
+  #results {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    width: 100%;
+    max-width: 500px;
+    text-align: center;
+    padding-top: 32px;
+  }
+  #results h2 { font-family: 'Playfair Display', Georgia, serif; color: var(--gold); font-size: 1.4rem; }
+  .score-big { font-family: 'Playfair Display', Georgia, serif; font-size: clamp(3rem, 12vw, 5rem); color: var(--gold); line-height: 1; }
+  .score-label { font-size: 1.1rem; color: #a0b4c8; }
+  .results-btns { display: flex; flex-direction: column; gap: 10px; align-items: center; }
+
+  /* Loading / error */
+  #loading { color: #a0b4c8; text-align: center; padding: 40px; display: none; }
+  #error-msg { display: none; color: #e06b63; text-align: center; padding: 20px; max-width: 400px; line-height: 1.8; }
+
+  .back-link { font-size: 1rem; color: #a0b4c8; text-decoration: none; margin-bottom: 8px; display: inline-block; cursor: pointer; }
+  .back-link:hover { color: var(--gold); }
+</style>
+</head>
+<body>
+
+<h1>Maine Town Quiz</h1>
+<p class="subtitle">Name the highlighted town</p>
+
+<div id="county-picker">
+  <h2>Choose a county</h2>
+  <div id="picker-map"></div>
+  <div id="county-label"></div>
+</div>
+
+<div id="loading">Loading map data…</div>
+<div id="error-msg"></div>
+
+<div id="quiz-ui" style="display:none; width:100%; max-width:500px; flex-direction:column; align-items:center;">
+  <div id="county-heading" style="font-family:'Playfair Display',Georgia,serif; color:var(--gold); font-size:1.6rem; margin-bottom:8px; text-align:center;"></div>
+  <div id="map-container"></div>
+
+  <div class="input-wrapper">
+    <input id="guess-input" type="text" autocomplete="off" placeholder="Type a town name…" oninput="onInput()" onkeydown="onKeydown(event)">
+    <div id="autocomplete-list"></div>
+  </div>
+
+  <div id="feedback"></div>
+
+  <div id="progress">
+    <div id="progress-bar-track"><div id="progress-bar-fill"></div></div>
+    <div id="progress-count"></div>
+  </div>
+
+  <button id="next-btn" class="btn" onclick="nextQuestion()">Next →</button>
+  <button id="picker-btn" class="btn visible btn-outline" style="margin-top:16px; margin-bottom:24px;" onclick="showPicker()">← Choose Another County</button>
+</div>
+
+<div id="results">
+  <h2 id="results-county">Complete</h2>
+  <div class="score-big" id="score-pct">—</div>
+  <div class="score-label" id="score-detail">—</div>
+  <div class="results-btns">
+    <button class="btn visible" onclick="startQuiz()">Try Again</button>
+    <button class="btn visible btn-outline" onclick="showPicker()">Choose Another County</button>
+  </div>
+</div>
+
+<script>
+// ---------------------------------------------------------------------------
+// FILTER CONFIGURATION (same as main quiz)
+// ---------------------------------------------------------------------------
+
+const ALWAYS_EXCLUDE = new Set([
+  'Hancock County Island', 'Knox County Island', 'Lincoln County Island',
+  'Piscataquis County Island', 'Waldo County Island', 'Washington County Island',
+]);
+
+const ALWAYS_INCLUDE = new Set([
+  'Matinicus Isle Plt', 'Monhegan Island Plt', 'Rangeley Plt',
+  'The Forks Plt', 'Grand Lake Stream Plt',
+]);
+
+const NORMAL_MODE_EXCLUDE = new Set([
+  'Township 6 North of Weld', 'Township D', 'Township E',
+  'C Surplus', 'Township C',
+  'Rockwood Strip T1 R1 NBKP', 'Rockwood Strip T2 R1 NBKP',
+]);
+
+function shouldInclude(f) {
+  const name = (f.properties.TOWN || '').trim();
+  if (!name) return false;
+  if (f.properties.LAND === 'n') return false;
+  if (ALWAYS_INCLUDE.has(name)) return true;
+  if (ALWAYS_EXCLUDE.has(name)) return false;
+  const upper = name.toUpperCase();
+  if (/UNORG|PATENT/.test(upper)) return false;
+  if (NORMAL_MODE_EXCLUDE.has(name)) return false;
+  if (/WELS/.test(upper)) return false;
+  if (/ TWP$| TWP | TOWNSHIP| PLT$| PLT | PLANTATION|GRANT TWP|GRANT$/.test(upper)) return false;
+  if (/^T[A-Z0-9]+ R[A-Z0-9]+/.test(upper)) return false;
+  if (/^T\d+\s/.test(upper)) return false;
+  if (/SURPLUS$/.test(upper)) return false;
+  return true;
+}
+
+// ---------------------------------------------------------------------------
+
+let allMaineTowns = []; // full statewide list for autocomplete
+let countyTowns = [], features = [], allLandFeatures = [];
+let lakesFeatures = [], allLakesData = null;
+let riversFeatures = [], allRiversData = null;
+let allCountiesData = null;
+let order = [], current = 0, score = 0, answered = false;
+let currentCounty = '';
+let svg, path;
+
+// Autocomplete state
+let acItems = [];
+let acIndex = -1;
+
+function fixWinding(features) {
+  return features.map(f => {
+    const geom = f.geometry;
+    if (!geom) return f;
+    const rev = coords => coords.map(ring => [...ring].reverse());
+    const fixed = geom.type === 'Polygon'
+      ? { ...geom, coordinates: rev(geom.coordinates) }
+      : geom.type === 'MultiPolygon'
+        ? { ...geom, coordinates: geom.coordinates.map(rev) }
+        : geom;
+    return { ...f, geometry: fixed };
+  });
+}
+
+async function loadAllTowns() {
+  if (allMaineTowns.length) return;
+  try {
+    const res = await fetch('./towns.json');
+    allMaineTowns = await res.json();
+  } catch(e) { allMaineTowns = []; }
+}
+
+async function loadLakesData() {
+  if (allLakesData) return;
+  try {
+    const res = await fetch('./lakes.geojson');
+    const data = await res.json();
+    allLakesData = fixWinding(data.features || []);
+  } catch(e) { allLakesData = []; }
+}
+
+async function loadRiversData() {
+  if (allRiversData) return;
+  try {
+    const res = await fetch('./rivers.geojson');
+    const data = await res.json();
+    allRiversData = data.features || [];
+  } catch(e) { allRiversData = []; }
+}
+
+function getCountyOutline(county) {
+  if (!allCountiesData) return null;
+  return allCountiesData.find(f => f.properties.COUNTY === county) || null;
+}
+
+function filterLakesForCounty(county) {
+  const outline = getCountyOutline(county);
+  if (!outline) return [];
+  return (allLakesData || []).filter(f => {
+    const centroid = d3.geoCentroid(f);
+    return d3.geoContains(outline, centroid);
+  });
+}
+
+function filterRiversForCounty(county) {
+  const outline = getCountyOutline(county);
+  if (!outline) return [];
+  return (allRiversData || []).filter(f => {
+    const centroid = d3.geoCentroid(f);
+    return d3.geoContains(outline, centroid);
+  });
+}
+
+function showPicker() {
+  document.getElementById('county-picker').style.display = 'block';
+  document.getElementById('quiz-ui').style.display = 'none';
+  document.getElementById('results').style.display = 'none';
+  document.getElementById('loading').style.display = 'none';
+  document.getElementById('error-msg').style.display = 'none';
+}
+
+async function loadCounty(county) {
+  currentCounty = county;
+  document.getElementById('county-picker').style.display = 'none';
+  document.getElementById('quiz-ui').style.display = 'none';
+  document.getElementById('results').style.display = 'none';
+  document.getElementById('error-msg').style.display = 'none';
+  const loading = document.getElementById('loading');
+  loading.style.display = 'block';
+  loading.textContent = 'Loading ' + county + ' County…';
+
+  try {
+    const base = county.toLowerCase().replace(/ /g, '_');
+    const res = await fetch('./' + base + '.geojson');
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const geo = await res.json();
+
+    allLandFeatures = geo.features.filter(f => f.properties.LAND === 'y');
+    features = geo.features.filter(shouldInclude);
+    countyTowns = [...new Set(features.map(f => f.properties.TOWN))].sort();
+
+    lakesFeatures = [];
+    riversFeatures = [];
+    loading.style.display = 'none';
+    document.getElementById('county-heading').textContent = county + ' County';
+    buildMap();
+    startQuiz();
+
+    Promise.all([loadLakesData(), loadRiversData()]).then(() => {
+      if (currentCounty !== county) return;
+      lakesFeatures = filterLakesForCounty(county);
+      riversFeatures = filterRiversForCounty(county);
+      updateOverlays();
+    });
+  } catch(e) {
+    loading.style.display = 'none';
+    const err = document.getElementById('error-msg');
+    err.style.display = 'block';
+    err.innerHTML = 'Could not load ' + county + ' County data.<br><small>(' + e.message + ')</small><br><br><a class="back-link" onclick="showPicker()">← Back to county list</a>';
+  }
+}
+
+function buildMap() {
+  document.getElementById('map-container').innerHTML = '';
+  const W = 500, H = 520;
+  const fitFeatures = allLandFeatures.length ? allLandFeatures : features;
+  const projection = d3.geoMercator().fitExtent([[24, 24], [W - 24, H - 24]], { type: 'FeatureCollection', features: fitFeatures });
+  path = d3.geoPath().projection(projection);
+  svg = d3.select('#map-container').append('svg').attr('viewBox', '0 0 ' + W + ' ' + H);
+
+  svg.append('rect').attr('width', W).attr('height', H).attr('fill', '#0d2237');
+
+  svg.append('g').attr('class', 'layer-land')
+    .selectAll('.county-bg').data(allLandFeatures).enter().append('path')
+    .attr('class', 'county-bg').attr('d', path);
+
+  svg.append('g').attr('class', 'layer-towns')
+    .selectAll('.town-shape').data(features).enter().append('path')
+    .attr('class', 'town-shape')
+    .attr('d', path)
+    .attr('data-name', d => d.properties.TOWN);
+
+  svg.append('g').attr('class', 'layer-rivers');
+  svg.append('g').attr('class', 'layer-lakes');
+}
+
+function updateOverlays() {
+  svg.select('.layer-rivers').selectAll('.river-shape').data(riversFeatures).enter()
+    .append('path').attr('class', 'river-shape').attr('d', path);
+  svg.select('.layer-lakes').selectAll('.lake-shape').data(lakesFeatures).enter()
+    .append('path').attr('class', 'lake-shape').attr('d', path);
+}
+
+function startQuiz() {
+  document.getElementById('results').style.display = 'none';
+  document.getElementById('quiz-ui').style.display = 'flex';
+  order = [...countyTowns].sort(() => Math.random() - 0.5);
+  current = 0;
+  score = 0;
+  d3.selectAll('.town-shape').classed('target correct wrong', false);
+  showQuestion();
+}
+
+function showQuestion() {
+  answered = false;
+  const input = document.getElementById('guess-input');
+  input.value = '';
+  input.disabled = false;
+  input.focus();
+  closeAutocomplete();
+  document.getElementById('feedback').textContent = '';
+  document.getElementById('feedback').className = '';
+  document.getElementById('next-btn').classList.remove('visible');
+
+  const pctDone = Math.round((current / order.length) * 100);
+  document.getElementById('progress-bar-fill').style.width = pctDone + '%';
+  document.getElementById('progress-count').textContent = (current + 1) + ' of ' + order.length;
+
+  // Reset all towns, then highlight target
+  d3.selectAll('.town-shape')
+    .filter(function() { return !d3.select(this).classed('correct'); })
+    .classed('target wrong', false);
+
+  const target = order[current];
+  d3.selectAll('.town-shape')
+    .filter(fd => fd.properties.TOWN === target)
+    .classed('target', true);
+}
+
+function submitGuess(guess) {
+  if (answered) return;
+  const target = order[current];
+  const normalized = guess.trim();
+  if (!normalized) return;
+
+  answered = true;
+  closeAutocomplete();
+  const input = document.getElementById('guess-input');
+  // Show the matched town name (proper casing) in the field
+  const matched = allMaineTowns.find(t => t.toLowerCase() === normalized.toLowerCase());
+  input.value = matched || normalized;
+  input.disabled = true;
+  document.getElementById('progress-bar-fill').style.width = Math.round(((current + 1) / order.length) * 100) + '%';
+
+  const isCorrect = normalized.toLowerCase() === target.toLowerCase();
+  const fb = document.getElementById('feedback');
+
+  // Remove target highlight from current question's town
+  d3.selectAll('.town-shape')
+    .filter(fd => fd.properties.TOWN === target)
+    .classed('target', false);
+
+  if (isCorrect) {
+    d3.selectAll('.town-shape')
+      .filter(fd => fd.properties.TOWN === target)
+      .classed('correct', true);
+    fb.textContent = '✓ Correct!';
+    fb.className = 'correct';
+    score++;
+  } else {
+    // Mark the guessed town wrong if it matched a real town
+    const guessedTown = allMaineTowns.find(t => t.toLowerCase() === normalized.toLowerCase());
+    if (guessedTown) {
+      d3.selectAll('.town-shape')
+        .filter(fd => fd.properties.TOWN === guessedTown)
+        .classed('wrong', true);
+    }
+    // Reveal the correct town in gold
+    d3.selectAll('.town-shape')
+      .filter(fd => fd.properties.TOWN === target)
+      .classed('target', true);
+    fb.textContent = '✗ ' + (guessedTown ? guessedTown + '. ' : '') + 'It\'s ' + target + '.';
+    fb.className = 'wrong';
+  }
+
+  document.getElementById('next-btn').classList.add('visible');
+}
+
+function nextQuestion() {
+  current++;
+  if (current >= order.length) showResults();
+  else showQuestion();
+}
+
+function showResults() {
+  document.getElementById('quiz-ui').style.display = 'none';
+  document.getElementById('results').style.display = 'flex';
+  document.getElementById('results-county').textContent = currentCounty + ' County Complete';
+  const pct = Math.round((score / order.length) * 100);
+  document.getElementById('score-pct').textContent = pct + '%';
+  document.getElementById('score-detail').textContent = score + ' out of ' + order.length + ' towns correct';
+}
+
+// ---------------------------------------------------------------------------
+// Autocomplete
+// ---------------------------------------------------------------------------
+
+function onInput() {
+  if (answered) return;
+  const val = document.getElementById('guess-input').value.trim();
+  if (!val) { closeAutocomplete(); return; }
+
+  const pool = allMaineTowns.length ? allMaineTowns : countyTowns;
+  const lower = val.toLowerCase();
+  const starts = pool.filter(t => t.toLowerCase().startsWith(lower));
+  const contains = pool.filter(t => !t.toLowerCase().startsWith(lower) && t.toLowerCase().includes(lower));
+  acItems = [...starts, ...contains];
+  acIndex = -1;
+
+  const list = document.getElementById('autocomplete-list');
+  list.innerHTML = '';
+
+  if (!acItems.length) { closeAutocomplete(); return; }
+
+  acItems.forEach((town, i) => {
+    const div = document.createElement('div');
+    div.className = 'ac-item';
+    div.textContent = town;
+    div.addEventListener('mousedown', e => {
+      e.preventDefault(); // prevent input blur before click
+      submitGuess(town);
+    });
+    list.appendChild(div);
+  });
+
+  list.classList.add('open');
+}
+
+function onKeydown(e) {
+  const list = document.getElementById('autocomplete-list');
+  const isOpen = list.classList.contains('open');
+
+  if (e.key === 'ArrowDown') {
+    e.preventDefault();
+    if (!isOpen) return;
+    acIndex = Math.min(acIndex + 1, acItems.length - 1);
+    updateActiveItem();
+  } else if (e.key === 'ArrowUp') {
+    e.preventDefault();
+    if (!isOpen) return;
+    acIndex = Math.max(acIndex - 1, -1);
+    updateActiveItem();
+  } else if (e.key === 'Enter') {
+    e.preventDefault();
+    if (answered) {
+      nextQuestion();
+      return;
+    }
+    if (isOpen && acIndex >= 0) {
+      submitGuess(acItems[acIndex]);
+    } else {
+      const val = document.getElementById('guess-input').value.trim();
+      if (val) submitGuess(val);
+    }
+  } else if (e.key === 'Escape') {
+    closeAutocomplete();
+  }
+}
+
+function updateActiveItem() {
+  const items = document.querySelectorAll('.ac-item');
+  items.forEach((el, i) => el.classList.toggle('active', i === acIndex));
+  if (acIndex >= 0 && items[acIndex]) {
+    items[acIndex].scrollIntoView({ block: 'nearest' });
+    document.getElementById('guess-input').value = acItems[acIndex];
+  }
+}
+
+function closeAutocomplete() {
+  const list = document.getElementById('autocomplete-list');
+  list.classList.remove('open');
+  list.innerHTML = '';
+  acItems = [];
+  acIndex = -1;
+}
+
+// Close autocomplete when clicking outside
+document.addEventListener('click', e => {
+  if (!e.target.closest('.input-wrapper')) closeAutocomplete();
+});
+
+// ---------------------------------------------------------------------------
+// County picker map
+// ---------------------------------------------------------------------------
+
+async function buildPickerMap() {
+  const res = await fetch('./counties.geojson');
+  const raw = await res.json();
+  const geo = { ...raw, features: fixWinding(raw.features) };
+  allCountiesData = geo.features;
+  const W = 500, H = 560;
+  const projection = d3.geoMercator().fitExtent([[16, 16], [W - 16, H - 16]], geo);
+  const pickerPath = d3.geoPath().projection(projection);
+  const pickerSvg = d3.select('#picker-map').append('svg').attr('viewBox', '0 0 ' + W + ' ' + H);
+  pickerSvg.append('rect').attr('width', W).attr('height', H).attr('fill', '#0d2237');
+  pickerSvg.selectAll('.county-shape')
+    .data(geo.features).enter().append('path')
+    .attr('class', 'county-shape')
+    .attr('d', pickerPath)
+    .on('mouseover', function(event, d) {
+      d3.select(this).classed('hovered', true);
+      document.getElementById('county-label').textContent = d.properties.COUNTY;
+    })
+    .on('mouseout', function() {
+      d3.select(this).classed('hovered', false);
+      document.getElementById('county-label').textContent = '';
+    })
+    .on('click', function(event, d) {
+      d3.selectAll('.county-shape').classed('hovered', false);
+      const county = d.properties.COUNTY;
+      document.getElementById('county-label').textContent = county;
+      setTimeout(() => loadCounty(county), 350);
+    });
+}
+
+buildPickerMap();
+loadAllTowns();
+</script>
+</body>
+</html>
