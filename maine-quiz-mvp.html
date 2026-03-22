@@ -117,14 +117,15 @@
     font-size: clamp(1.4rem, 5vw, 2rem);
     color: var(--parchment);
   }
+  #town-name.correct { color: #6dbf7a; }
 
   #feedback {
     font-size: 1.3rem;
-    min-height: 1em;
+    height: 2rem;
     text-align: center;
     margin-bottom: 4px;
+    overflow: hidden;
   }
-  #feedback.correct { color: #6dbf7a; }
   #feedback.wrong { color: #e06b63; }
 
   #map-container {
@@ -633,7 +634,9 @@ function showQuestion() {
   document.getElementById('next-btn').classList.remove('visible');
   document.getElementById('feedback').textContent = '';
   document.getElementById('feedback').className = '';
-  document.getElementById('town-name').textContent = order[current];
+  const townNameEl = document.getElementById('town-name');
+  townNameEl.textContent = order[current];
+  townNameEl.classList.remove('correct');
   const pctDone = Math.round((current / order.length) * 100);
   document.getElementById('progress-bar-fill').style.width = pctDone + '%';
   d3.selectAll('.town-shape').classed('wrong reveal answered', false);
@@ -651,20 +654,23 @@ function handleClick(event, d) {
     d3.selectAll('.town-shape')
       .filter(function(fd) { return fd.properties.TOWN === clicked; })
       .classed('correct answered', true);
-    document.getElementById('feedback').textContent = '✓ Correct!';
-    document.getElementById('feedback').className = 'correct';
+    const townNameEl = document.getElementById('town-name');
+    townNameEl.textContent = '✓ Correct!';
+    townNameEl.classList.add('correct');
+    document.getElementById('feedback').textContent = '';
     score++;
     recordAnswer(target, true);
+    setTimeout(nextQuestion, 1400);
   } else {
     el.classed('wrong answered', true);
     d3.selectAll('.town-shape')
       .filter(function(fd) { return fd.properties.TOWN === target; })
       .classed('reveal answered', true);
-    document.getElementById('feedback').textContent = '✗ That\'s ' + clicked + '. ' + target + ' is highlighted in gold.';
+    document.getElementById('feedback').textContent = '✗ That\'s ' + clicked + '.';
     document.getElementById('feedback').className = 'wrong';
     recordAnswer(target, false);
+    document.getElementById('next-btn').classList.add('visible');
   }
-  document.getElementById('next-btn').classList.add('visible');
 }
 
 function nextQuestion() {
