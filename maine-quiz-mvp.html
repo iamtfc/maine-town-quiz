@@ -423,10 +423,11 @@ let svg, path;
 // ---------------------------------------------------------------------------
 
 const STATS_KEY = 'maineQuizStats';
+let currentGameAnswers = [];
 
 function loadStats() {
-  try { return JSON.parse(localStorage.getItem(STATS_KEY)) || { towns: {}, countyBest: {} }; }
-  catch(e) { return { towns: {}, countyBest: {} }; }
+  try { return JSON.parse(localStorage.getItem(STATS_KEY)) || { countyBest: {}, countyGames: {} }; }
+  catch(e) { return { countyBest: {}, countyGames: {} }; }
 }
 
 function saveStats(stats) {
@@ -434,28 +435,35 @@ function saveStats(stats) {
 }
 
 function recordAnswer(town, correct) {
+  currentGameAnswers.push({ town, correct });
+}
+
+function finalizeGame(county, pct) {
   const stats = loadStats();
-  if (!stats.towns[town]) stats.towns[town] = { seen: 0, correct: 0 };
-  stats.towns[town].seen++;
-  if (correct) stats.towns[town].correct++;
+  if (!stats.countyGames) stats.countyGames = {};
+  if (!stats.countyGames[county]) stats.countyGames[county] = [];
+  stats.countyGames[county].push(currentGameAnswers.slice());
+  if (stats.countyGames[county].length > 5) stats.countyGames[county].shift();
+  if (pct > (stats.countyBest[county] || 0)) stats.countyBest[county] = pct;
   saveStats(stats);
+  currentGameAnswers = [];
 }
 
-function recordCountyBest(county, pct) {
-  const stats = loadStats();
-  if (pct > (stats.countyBest[county] || 0)) {
-    stats.countyBest[county] = pct;
-    saveStats(stats);
+function getTopBottom(stats, county, n = 5) {
+  const games = (stats.countyGames || {})[county] || [];
+  const townsMap = {};
+  for (const game of games) {
+    for (const { town, correct } of game) {
+      if (!townsMap[town]) townsMap[town] = { seen: 0, correct: 0 };
+      townsMap[town].seen++;
+      if (correct) townsMap[town].correct++;
+    }
   }
-}
-
-function getTopBottom(stats, countyTowns, n = 5) {
-  const countySet = new Set(countyTowns);
-  const entries = Object.entries(stats.towns)
-    .filter(([town, s]) => countySet.has(town) && s.seen >= 2)
+  const entries = Object.entries(townsMap)
+    .filter(([, s]) => s.seen >= 2)
     .map(([town, s]) => ({ town, pct: Math.round(s.correct / s.seen * 100), seen: s.seen }))
-    .sort((a, b) => b.pct - a.pct || b.seen - a.seen);
-  return { top: entries.slice(0, n), bottom: entries.slice(-n).reverse() };
+    .sort((a, b) => a.pct - b.pct || b.seen - a.seen);
+  return { bottom: entries.slice(0, n) };
 }
 
 function fixWinding(features) {
@@ -615,7 +623,7 @@ function startQuiz() {
   document.getElementById('results').style.display = 'none';
   document.getElementById('quiz-ui').style.display = 'flex';
   order = [...towns].sort(() => Math.random() - 0.5);
-  current = 0; score = 0;
+  current = 0; score = 0; currentGameAnswers = [];
   d3.selectAll('.town-shape').classed('correct wrong reveal answered', false);
   showQuestion();
 }
@@ -680,7 +688,7 @@ function showResults() {
   document.getElementById('score-detail').textContent = score + ' out of ' + order.length + ' towns correct';
 
   // All-time best for this county
-  recordCountyBest(currentCounty, pct);
+  finalizeGame(currentCounty, pct);
   const stats = loadStats();
   const best = stats.countyBest[currentCounty] || pct;
   const bestEl = document.getElementById('all-time-best');
@@ -690,7 +698,7 @@ function showResults() {
   bestEl.style.fontFamily = pct >= best ? "'Playfair Display', Georgia, serif" : '';
 
   // Top / bottom towns
-  const { top, bottom } = getTopBottom(stats, towns);
+  const { bottom } = getTopBottom(stats, currentCounty);
   const statsEl = document.getElementById('town-stats');
 
   if (top.length === 0) {

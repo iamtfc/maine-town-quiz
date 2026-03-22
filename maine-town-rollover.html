@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Maine Town Rollover</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Crimson+Pro:ital,wght@0,400;0,600;1,400&display=swap');
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --ocean: #1a3a5c;
+    --deep: #0d2237;
+    --parchment: #f5efe0;
+    --gold: #c8a84b;
+  }
+
+  body {
+    font-family: 'Crimson Pro', Georgia, serif;
+    background: var(--deep);
+    color: var(--parchment);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 16px;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  h1 {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: clamp(1.2rem, 4vw, 1.8rem);
+    color: var(--gold);
+    text-align: center;
+    margin-bottom: 4px;
+    letter-spacing: 0.02em;
+  }
+
+  .subtitle {
+    font-style: italic;
+    color: #a0b4c8;
+    font-size: 0.95rem;
+    margin-bottom: 20px;
+    text-align: center;
+  }
+
+  #loading {
+    color: #a0b4c8;
+    text-align: center;
+    padding: 40px;
+  }
+
+  #progress-track {
+    width: 280px;
+    height: 8px;
+    background: var(--ocean);
+    border-radius: 4px;
+    overflow: hidden;
+    margin: 12px auto;
+  }
+
+  #progress-fill {
+    height: 100%;
+    background: #a0b4c8;
+    border-radius: 4px;
+    width: 0%;
+    transition: width 0.2s ease;
+  }
+
+  #progress-text { font-size: 0.9rem; }
+
+  #panels {
+    display: none;
+    gap: 12px;
+    width: 100%;
+    max-width: 860px;
+    align-items: flex-start;
+  }
+
+  #main-map-wrap { flex: 0 0 42%; }
+  #zoom-wrap      { flex: 1; }
+
+  .map-box {
+    background: var(--ocean);
+    border: 4px solid #a0b4c8;
+    border-radius: 8px;
+    overflow: hidden;
+    position: relative;
+  }
+
+  .map-box svg { width: 100%; height: auto; display: block; }
+
+  #zoom-placeholder {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #a0b4c8;
+    font-style: italic;
+    font-size: 0.9rem;
+    text-align: center;
+    padding: 20px;
+    pointer-events: none;
+  }
+
+  .land-bg      { fill: #3a5c3c; stroke: none; pointer-events: none; }
+  .town-main         { fill: #4e6e50; stroke: #7B9E7D; stroke-width: 0.4; cursor: crosshair; }
+  .town-main.hl      { fill: #a8c9aa; }
+  .town-main.correct { fill: #5cb87a; cursor: default; }
+  .town-main.wrong   { fill: #7a2820; cursor: default; }
+  .town-main.reveal  { fill: var(--gold); cursor: default; }
+  .town-zoom         { fill: #4e6e50; stroke: #7B9E7D; stroke-width: 0.8;
+                       pointer-events: none; vector-effect: non-scaling-stroke; }
+  .town-zoom.hl      { fill: #a8c9aa; }
+  .town-zoom.correct { fill: #5cb87a; }
+  .town-zoom.wrong   { fill: #7a2820; }
+  .town-zoom.reveal  { fill: var(--gold); }
+  .land-zoom         { fill: #3a5c3c; stroke: none; pointer-events: none;
+                       vector-effect: non-scaling-stroke; }
+  .lake-shape  { fill: #2a6fa8; fill-opacity: 0.65; stroke: none; pointer-events: none; }
+  .river-line  { stroke: #2a6fa8; stroke-opacity: 0.65; stroke-width: 3px; vector-effect: non-scaling-stroke; pointer-events: none; }
+  .river-shape { fill: none; stroke: #2a6fa8; stroke-opacity: 0.75; stroke-width: 1.2;
+                 pointer-events: none; vector-effect: non-scaling-stroke; }
+
+  #quiz-ui {
+    margin-top: 10px;
+    text-align: center;
+  }
+
+  #target-town {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: clamp(1.2rem, 3vw, 1.6rem);
+    color: var(--parchment);
+    min-height: 1.4em;
+    margin-bottom: 6px;
+  }
+
+  #feedback {
+    font-size: 1rem;
+    min-height: 1.2em;
+    margin-bottom: 6px;
+  }
+  #feedback.correct { color: #6dbf7a; }
+  #feedback.wrong   { color: #e06b63; }
+
+  #progress-bar-track {
+    width: 100%;
+    height: 6px;
+    background: var(--ocean);
+    border-radius: 3px;
+    overflow: hidden;
+    margin-bottom: 8px;
+  }
+  #progress-bar-fill {
+    height: 100%;
+    background: #a0b4c8;
+    border-radius: 3px;
+    width: 0%;
+    transition: width 0.3s ease;
+  }
+
+  #next-btn {
+    display: none;
+    padding: 8px 24px;
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: 1rem;
+    background: var(--gold);
+    color: var(--deep);
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 700;
+  }
+  #next-btn:hover { background: #dfc060; }
+  #next-btn.visible { display: inline-block; }
+
+  .viewport-rect {
+    fill: rgba(200, 168, 75, 0.12);
+    stroke: var(--gold);
+    stroke-width: 1.5;
+    pointer-events: none;
+  }
+</style>
+</head>
+<body>
+
+<h1>Maine Town Rollover</h1>
+<p class="subtitle">Drag to explore</p>
+
+<div id="loading">
+  <p id="progress-text">Loading Maine town data…</p>
+  <div id="progress-track"><div id="progress-fill"></div></div>
+</div>
+
+<div id="panels">
+  <div id="main-map-wrap">
+    <div class="map-box" id="main-map"></div>
+    <div id="quiz-ui">
+      <div id="target-town">—</div>
+      <div id="feedback"></div>
+      <div id="progress-bar-track"><div id="progress-bar-fill"></div></div>
+      <button id="next-btn" onclick="nextQuestion()">Next →</button>
+    </div>
+  </div>
+  <div id="zoom-wrap">
+    <div class="map-box" id="zoom-panel">
+      <div id="zoom-placeholder">Drag over the map to zoom in</div>
+    </div>
+  </div>
+</div>
+
+<script>
+
+function fixWinding(features) {
+  return features.map(f => {
+    const geom = f.geometry;
+    if (!geom) return f;
+    const rev = coords => coords.map(ring => [...ring].reverse());
+    const fixed = geom.type === 'Polygon'
+      ? { ...geom, coordinates: rev(geom.coordinates) }
+      : geom.type === 'MultiPolygon'
+        ? { ...geom, coordinates: geom.coordinates.map(rev) }
+        : geom;
+    return { ...f, geometry: fixed };
+  });
+}
+
+// ---------------------------------------------------------------------------
+
+const MAIN_W = 360, MAIN_H = 440;
+const ZOOM_SIZE = 360;
+const DELTA = 0.32; // half-width of zoom window in degrees (~22 miles)
+
+let quizFeatures = [], allLandFeatures = [];
+let lakesFeatures = [], riversFeatures = [];
+let mainProjection, mainPath;
+let mainSvg, zoomSvg, zoomGroup;
+let viewportRect;
+let lastTownName = null;
+let townCentroids = {}; // town name -> [px, py] in main map pixel space
+
+// Quiz state
+let order = [], current = 0, score = 0, answered = false;
+let allTownNames = [];
+
+async function init() {
+  document.getElementById('progress-text').textContent = 'Loading…';
+
+  const [townsData, countiesData, lakesData, riversData] = await Promise.all([
+    fetch('./maine-rollover.geojson').then(r => r.json()),
+    fetch('./counties.geojson').then(r => r.json()).catch(() => ({ features: [] })),
+    fetch('./lakes.geojson').then(r => r.json()).catch(() => ({ features: [] })),
+    fetch('./rivers.geojson').then(r => r.json()).catch(() => ({ features: [] })),
+  ]);
+
+  document.getElementById('progress-fill').style.width = '100%';
+
+  quizFeatures = townsData.features || [];
+  allLandFeatures = fixWinding(countiesData.features || []); // county polygons as land base
+  const MAINE = { minLng: -71.3, maxLng: -66.8, minLat: 42.9, maxLat: 47.5 };
+  lakesFeatures = fixWinding(lakesData.features || []).filter(f => {
+    const [lng, lat] = d3.geoCentroid(f);
+    return lng >= MAINE.minLng && lng <= MAINE.maxLng &&
+           lat >= MAINE.minLat && lat <= MAINE.maxLat;
+  });
+  const RIVER_NAMES = new Set([
+    'Penobscot River', 'Kennebec River', 'Androscoggin River', 'Saint John River',
+    'Aroostook River', 'Saco River', 'St. Croix River', 'Allagash River',
+    'Dead River', 'West Branch Penobscot River', 'East Branch Penobscot River',
+    'Sandy River', 'Machias River', 'Sheepscot River', 'Union River',
+    'Presumpscot River', 'Mousam River', 'Ossipee River',
+  ]);
+  riversFeatures = (riversData.features || []).filter(f => RIVER_NAMES.has(f.properties.gnis_name));
+
+  document.getElementById('loading').style.display = 'none';
+  document.getElementById('panels').style.display = 'flex';
+
+  allTownNames = [...new Set(quizFeatures.map(f => f.properties.TOWN))];
+  buildMainMap();
+  buildZoomPanel();
+  buildTownCentroids();
+  startQuiz();
+}
+
+function buildMainMap() {
+  const fc = { type: 'FeatureCollection', features: quizFeatures };
+  mainProjection = d3.geoMercator().fitExtent([[12, 12], [MAIN_W - 12, MAIN_H - 12]], fc);
+  mainPath = d3.geoPath().projection(mainProjection);
+
+  mainSvg = d3.select('#main-map').append('svg')
+    .attr('viewBox', `0 0 ${MAIN_W} ${MAIN_H}`)
+    .style('touch-action', 'none');
+
+  mainSvg.append('rect').attr('width', MAIN_W).attr('height', MAIN_H).attr('fill', '#0d2237');
+
+  mainSvg.append('g').selectAll('path')
+    .data(allLandFeatures).enter().append('path')
+    .attr('class', 'land-bg').attr('d', mainPath);
+
+  mainSvg.append('g').attr('id', 'main-towns')
+    .selectAll('path').data(quizFeatures).enter().append('path')
+    .attr('class', 'town-main').attr('d', mainPath)
+    .attr('data-town', d => d.properties.TOWN);
+
+  viewportRect = mainSvg.append('rect')
+    .attr('class', 'viewport-rect')
+    .attr('opacity', 0);
+
+  mainSvg
+    .on('mousemove', onMove)
+    .on('mouseleave', onLeave)
+    .on('click', onMapClick)
+    .on('touchstart', e => { e.preventDefault(); onMove(e.touches[0]); }, { passive: false })
+    .on('touchmove',  e => { e.preventDefault(); onMove(e.touches[0]); }, { passive: false })
+    .on('touchend', e => { e.preventDefault(); onMapClick(e.changedTouches[0]); }, { passive: false });
+}
+
+function buildZoomPanel() {
+  zoomSvg = d3.select('#zoom-panel').append('svg')
+    .attr('viewBox', `0 0 ${ZOOM_SIZE} ${ZOOM_SIZE}`);
+
+  zoomSvg.append('rect').attr('width', ZOOM_SIZE).attr('height', ZOOM_SIZE).attr('fill', '#0d2237');
+
+  // All paths use mainPath coordinates — the group transform does the zooming
+  zoomGroup = zoomSvg.append('g').attr('id', 'zoom-group');
+
+  zoomGroup.append('g').selectAll('path')
+    .data(allLandFeatures).enter().append('path')
+    .attr('class', 'land-zoom').attr('d', mainPath);
+
+  zoomGroup.append('g').attr('id', 'zoom-towns')
+    .selectAll('path').data(quizFeatures).enter().append('path')
+    .attr('class', 'town-zoom').attr('d', mainPath)
+    .attr('data-town', d => d.properties.TOWN);
+
+  zoomGroup.append('g').selectAll('path')
+    .data(lakesFeatures).enter().append('path')
+    .attr('class', 'lake-shape').attr('d', mainPath);
+
+  zoomGroup.append('g').selectAll('path')
+    .data(riversFeatures).enter().append('path')
+    .attr('class', 'river-line').attr('d', mainPath).attr('fill', 'none');
+}
+
+function onMove(event) {
+  if (answered) return;
+  const [sx, sy] = d3.pointer(event, mainSvg.node());
+  const geo = mainProjection.invert([sx, sy]);
+  if (!geo) return;
+  const town = quizFeatures.find(f => d3.geoContains(f, geo));
+  activateTown(town ? town.properties.TOWN : null);
+}
+
+function onLeave() {
+  if (answered) return;
+  activateTown(null);
+}
+
+function onMapClick(event) {
+  if (answered) return;
+  const [sx, sy] = d3.pointer(event, mainSvg.node());
+  const geo = mainProjection.invert([sx, sy]);
+  if (!geo) return;
+  const town = quizFeatures.find(f => d3.geoContains(f, geo));
+  if (town) submitAnswer(town.properties.TOWN);
+}
+
+function activateTown(townName) {
+  if (townName === lastTownName) return;
+  lastTownName = townName;
+
+  mainSvg.selectAll('.town-main').classed('hl', false);
+
+  if (!townName) {
+    viewportRect.attr('opacity', 0);
+    document.getElementById('zoom-placeholder').style.display = 'flex';
+    return;
+  }
+
+  mainSvg.selectAll('.town-main')
+    .filter(d => d.properties.TOWN === townName)
+    .classed('hl', true);
+
+  const feature = quizFeatures.find(f => f.properties.TOWN === townName);
+  const centroid = d3.geoCentroid(feature);
+  const [cx, cy] = mainProjection(centroid);
+
+  const [px1] = mainProjection([centroid[0] - DELTA, centroid[1]]);
+  const [px2] = mainProjection([centroid[0] + DELTA, centroid[1]]);
+  const Z = ZOOM_SIZE / (px2 - px1);
+
+  zoomGroup.attr('transform', `translate(${ZOOM_SIZE / 2 - cx * Z}, ${ZOOM_SIZE / 2 - cy * Z}) scale(${Z})`);
+  zoomGroup.selectAll('.town-zoom').classed('hl', d => d.properties.TOWN === townName);
+
+  const half = (ZOOM_SIZE / Z) / 2;
+  viewportRect.attr('opacity', 1)
+    .attr('x', cx - half).attr('y', cy - half)
+    .attr('width', half * 2).attr('height', half * 2);
+
+  document.getElementById('zoom-placeholder').style.display = 'none';
+}
+
+function buildTownCentroids() {
+  const seen = new Set();
+  quizFeatures.forEach(f => {
+    const name = f.properties.TOWN;
+    if (!seen.has(name)) {
+      seen.add(name);
+      townCentroids[name] = mainProjection(d3.geoCentroid(f));
+    }
+  });
+}
+
+function findNeighbor(currentName, dx, dy) {
+  const [cx, cy] = townCentroids[currentName];
+  let bestName = null, bestDist = Infinity;
+  for (const [name, [tx, ty]] of Object.entries(townCentroids)) {
+    if (name === currentName) continue;
+    const tdx = tx - cx, tdy = ty - cy;
+    const dot = tdx * dx + tdy * dy;
+    if (dot <= 0) continue;
+    const dist = Math.sqrt(tdx * tdx + tdy * tdy);
+    if (dot / dist < 0.5) continue; // must be within 60° of direction
+    if (dist < bestDist) { bestDist = dist; bestName = name; }
+  }
+  return bestName;
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    if (answered) { nextQuestion(); return; }
+    if (lastTownName) submitAnswer(lastTownName);
+    return;
+  }
+  const dir = { ArrowRight: [1,0], ArrowLeft: [-1,0], ArrowDown: [0,1], ArrowUp: [0,-1] }[e.key];
+  if (!dir) return;
+  e.preventDefault();
+  if (answered) return;
+  if (!lastTownName) return;
+  const next = findNeighbor(lastTownName, dir[0], dir[1]);
+  if (next) activateTown(next);
+});
+
+// ---------------------------------------------------------------------------
+// Quiz functions
+// ---------------------------------------------------------------------------
+
+function startQuiz() {
+  order = [...allTownNames].sort(() => Math.random() - 0.5).slice(0, 15);
+  current = 0;
+  score = 0;
+  showQuestion();
+}
+
+function showQuestion() {
+  answered = false;
+  lastTownName = null;
+  mainSvg.selectAll('.town-main').classed('hl correct wrong reveal', false).attr('class', 'town-main');
+  zoomGroup.selectAll('.town-zoom').classed('hl correct wrong reveal', false);
+  viewportRect.attr('opacity', 0);
+  document.getElementById('zoom-placeholder').style.display = 'flex';
+  document.getElementById('next-btn').classList.remove('visible');
+  document.getElementById('feedback').textContent = '';
+  document.getElementById('feedback').className = '';
+  document.getElementById('target-town').textContent = order[current];
+  document.getElementById('progress-bar-fill').style.width =
+    Math.round((current / order.length) * 100) + '%';
+}
+
+function submitAnswer(guessName) {
+  if (answered) return;
+  answered = true;
+  const target = order[current];
+  const isCorrect = guessName === target;
+
+  // Clear hover highlight
+  mainSvg.selectAll('.town-main').classed('hl', false);
+  zoomGroup.selectAll('.town-zoom').classed('hl', false);
+
+  const fb = document.getElementById('feedback');
+  if (isCorrect) {
+    mainSvg.selectAll('.town-main').filter(d => d.properties.TOWN === target).classed('correct', true);
+    zoomGroup.selectAll('.town-zoom').filter(d => d.properties.TOWN === target).classed('correct', true);
+    fb.textContent = '✓ Correct!';
+    fb.className = 'correct';
+    score++;
+  } else {
+    mainSvg.selectAll('.town-main').filter(d => d.properties.TOWN === guessName).classed('wrong', true);
+    mainSvg.selectAll('.town-main').filter(d => d.properties.TOWN === target).classed('reveal', true);
+    zoomGroup.selectAll('.town-zoom').filter(d => d.properties.TOWN === guessName).classed('wrong', true);
+    zoomGroup.selectAll('.town-zoom').filter(d => d.properties.TOWN === target).classed('reveal', true);
+    fb.textContent = '✗ ' + guessName + ' — the answer is ' + target;
+    fb.className = 'wrong';
+  }
+
+  // Center zoom panel on correct town
+  activateTown(null); // reset lastTownName so activateTown runs
+  lastTownName = null;
+  activateTown(target);
+
+  document.getElementById('progress-bar-fill').style.width =
+    Math.round(((current + 1) / order.length) * 100) + '%';
+  document.getElementById('next-btn').classList.add('visible');
+}
+
+function nextQuestion() {
+  current++;
+  if (current >= order.length) {
+    document.getElementById('target-town').textContent =
+      'Done! ' + score + ' / ' + order.length + ' correct';
+    document.getElementById('feedback').textContent = '';
+    document.getElementById('next-btn').classList.remove('visible');
+    mainSvg.selectAll('.town-main').attr('class', 'town-main');
+    // Optionally restart
+    setTimeout(startQuiz, 3000);
+    return;
+  }
+  showQuestion();
+}
+
+init();
+</script>
+</body>
+</html>
