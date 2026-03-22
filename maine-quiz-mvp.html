@@ -209,25 +209,20 @@
   #progress-bar-track {
     width: 100%;
     height: 8px;
-    background: var(--ocean);
-    border-radius: 4px;
-    overflow: hidden;
+    display: flex;
+    gap: 2px;
     margin-bottom: 4px;
   }
 
-  #progress-bar-fill {
+  .seg {
+    flex: 1;
     height: 100%;
-    background: #a0b4c8;
-    border-radius: 4px;
-    transition: width 0.3s ease;
-    width: 0%;
+    background: var(--ocean);
+    border-radius: 2px;
+    transition: background 0.2s;
   }
-
-  #progress-count {
-    font-size: 0.85rem;
-    color: #a0b4c8;
-    text-align: center;
-  }
+  .seg.correct { background: var(--correct); }
+  .seg.wrong { background: #e06b63; }
   #picker-btn { margin-top: 24px; margin-bottom: 24px; }
 
   #results {
@@ -324,7 +319,7 @@
   <div id="feedback"></div>
   <div id="map-container"></div>
   <div id="progress">
-    <div id="progress-bar-track"><div id="progress-bar-fill"></div></div>
+    <div id="progress-bar-track"></div>
   </div>
   <button id="next-btn" class="btn" onclick="nextQuestion()">Next →</button>
   <button id="picker-btn" class="btn visible btn-outline" onclick="showPicker()">← Choose Another County</button>
@@ -626,6 +621,14 @@ function startQuiz() {
   order = [...towns].sort(() => Math.random() - 0.5);
   current = 0; score = 0; currentGameAnswers = [];
   d3.selectAll('.town-shape').classed('correct wrong reveal answered', false);
+  const track = document.getElementById('progress-bar-track');
+  track.innerHTML = '';
+  order.forEach((_, i) => {
+    const seg = document.createElement('div');
+    seg.className = 'seg';
+    seg.id = 'seg-' + i;
+    track.appendChild(seg);
+  });
   showQuestion();
 }
 
@@ -637,8 +640,6 @@ function showQuestion() {
   const townNameEl = document.getElementById('town-name');
   townNameEl.textContent = order[current];
   townNameEl.classList.remove('correct');
-  const pctDone = Math.round((current / order.length) * 100);
-  document.getElementById('progress-bar-fill').style.width = pctDone + '%';
   d3.selectAll('.town-shape').classed('wrong reveal answered', false);
 }
 
@@ -646,11 +647,13 @@ function handleClick(event, d) {
   if (answered) return;
   answered = true;
   d3.selectAll('.town-shape').classed('hovered', false);
-  document.getElementById('progress-bar-fill').style.width = Math.round(((current + 1) / order.length) * 100) + '%';
   const clicked = d.properties.TOWN;
   const target = order[current];
   const el = d3.select(event.currentTarget);
-  if (clicked === target) {
+  const isCorrect = clicked === target;
+  const seg = document.getElementById('seg-' + current);
+  if (seg) seg.classList.add(isCorrect ? 'correct' : 'wrong');
+  if (isCorrect) {
     d3.selectAll('.town-shape')
       .filter(function(fd) { return fd.properties.TOWN === clicked; })
       .classed('correct answered', true);
@@ -661,7 +664,7 @@ function handleClick(event, d) {
     score++;
     recordAnswer(target, true);
     setTimeout(nextQuestion, 1400);
-  } else {
+  } else { // wrong
     el.classed('wrong answered', true);
     d3.selectAll('.town-shape')
       .filter(function(fd) { return fd.properties.TOWN === target; })
