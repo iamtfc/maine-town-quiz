@@ -636,9 +636,7 @@ function showQuestion() {
   document.getElementById('town-name').textContent = order[current];
   const pctDone = Math.round((current / order.length) * 100);
   document.getElementById('progress-bar-fill').style.width = pctDone + '%';
-  d3.selectAll('.town-shape')
-    .filter(function() { return !d3.select(this).classed('correct'); })
-    .classed('wrong reveal answered', false);
+  d3.selectAll('.town-shape').classed('wrong reveal answered', false);
 }
 
 function handleClick(event, d) {
