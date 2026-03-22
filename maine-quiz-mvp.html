@@ -255,7 +255,7 @@
 
   .score-label {
     font-size: 1.1rem;
-    color: #a0b4c8;
+    color: var(--parchment);
   }
 
   .results-btns {
@@ -290,6 +290,15 @@
     cursor: pointer;
   }
   .back-link:hover { color: var(--gold); }
+
+  .stat-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 3px 0;
+    font-size: 1.3rem;
+  }
+  .stat-pct { font-family: 'Playfair Display', Georgia, serif; margin-left: 12px; white-space: nowrap; }
 </style>
 </head>
 <body>
@@ -324,7 +333,14 @@
   <h2 id="results-county">Complete</h2>
   <div class="score-big" id="score-pct">—</div>
   <div class="score-label" id="score-detail">—</div>
-  <div class="results-btns">
+  <div id="all-time-best" style="font-size:0.95rem; color:#a0b4c8; margin-top:4px;"></div>
+  <div id="town-stats" style="display:none; width:100%; margin-top:16px;">
+    <div style="width:260px; margin:0 auto;">
+      <div style="color:var(--parchment); font-size:1.3rem; margin-bottom:8px;">Most Missed</div>
+      <div id="bottom-towns"></div>
+    </div>
+  </div>
+  <div class="results-btns" style="margin-top:16px;">
     <button class="btn visible" onclick="startQuiz()">Try Again</button>
     <button class="btn visible btn-outline" onclick="showPicker()">Choose Another County</button>
   </div>
@@ -401,6 +417,46 @@ let allCountiesData = null;
 let current = 0, score = 0, answered = false;
 let currentCounty = '';
 let svg, path;
+
+// ---------------------------------------------------------------------------
+// STATS (localStorage)
+// ---------------------------------------------------------------------------
+
+const STATS_KEY = 'maineQuizStats';
+
+function loadStats() {
+  try { return JSON.parse(localStorage.getItem(STATS_KEY)) || { towns: {}, countyBest: {} }; }
+  catch(e) { return { towns: {}, countyBest: {} }; }
+}
+
+function saveStats(stats) {
+  try { localStorage.setItem(STATS_KEY, JSON.stringify(stats)); } catch(e) {}
+}
+
+function recordAnswer(town, correct) {
+  const stats = loadStats();
+  if (!stats.towns[town]) stats.towns[town] = { seen: 0, correct: 0 };
+  stats.towns[town].seen++;
+  if (correct) stats.towns[town].correct++;
+  saveStats(stats);
+}
+
+function recordCountyBest(county, pct) {
+  const stats = loadStats();
+  if (pct > (stats.countyBest[county] || 0)) {
+    stats.countyBest[county] = pct;
+    saveStats(stats);
+  }
+}
+
+function getTopBottom(stats, countyTowns, n = 5) {
+  const countySet = new Set(countyTowns);
+  const entries = Object.entries(stats.towns)
+    .filter(([town, s]) => countySet.has(town) && s.seen >= 2)
+    .map(([town, s]) => ({ town, pct: Math.round(s.correct / s.seen * 100), seen: s.seen }))
+    .sort((a, b) => b.pct - a.pct || b.seen - a.seen);
+  return { top: entries.slice(0, n), bottom: entries.slice(-n).reverse() };
+}
 
 function fixWinding(features) {
   return features.map(f => {
@@ -592,6 +648,7 @@ function handleClick(event, d) {
     document.getElementById('feedback').textContent = '✓ Correct!';
     document.getElementById('feedback').className = 'correct';
     score++;
+    recordAnswer(target, true);
   } else {
     el.classed('wrong answered', true);
     d3.selectAll('.town-shape')
@@ -599,6 +656,7 @@ function handleClick(event, d) {
       .classed('reveal answered', true);
     document.getElementById('feedback').textContent = '✗ That\'s ' + clicked + '. ' + target + ' is highlighted in gold.';
     document.getElementById('feedback').className = 'wrong';
+    recordAnswer(target, false);
   }
   document.getElementById('next-btn').classList.add('visible');
 }
@@ -613,9 +671,38 @@ function showResults() {
   document.getElementById('quiz-ui').style.display = 'none';
   document.getElementById('results').style.display = 'flex';
   document.getElementById('results-county').textContent = currentCounty + ' County Complete';
+
   const pct = Math.round((score / order.length) * 100);
-  document.getElementById('score-pct').textContent = pct + '%';
+  const pctColor = p => p >= 67 ? 'var(--correct)' : p >= 34 ? 'var(--gold)' : '#e06b63';
+  const scorePctEl = document.getElementById('score-pct');
+  scorePctEl.textContent = pct + '%';
+  scorePctEl.style.color = pctColor(pct);
   document.getElementById('score-detail').textContent = score + ' out of ' + order.length + ' towns correct';
+
+  // All-time best for this county
+  recordCountyBest(currentCounty, pct);
+  const stats = loadStats();
+  const best = stats.countyBest[currentCounty] || pct;
+  const bestEl = document.getElementById('all-time-best');
+  bestEl.textContent = pct >= best ? 'New personal best!' : 'All-time best: ' + best + '%';
+  bestEl.style.color = pct >= best ? 'var(--correct)' : 'var(--parchment)';
+  bestEl.style.fontSize = pct >= best ? '1.4rem' : '0.95rem';
+  bestEl.style.fontFamily = pct >= best ? "'Playfair Display', Georgia, serif" : '';
+
+  // Top / bottom towns
+  const { top, bottom } = getTopBottom(stats, towns);
+  const statsEl = document.getElementById('town-stats');
+
+  if (top.length === 0) {
+    statsEl.style.display = 'none';
+  } else {
+    statsEl.style.display = 'block';
+    const pctColor = p => p >= 67 ? '#6dbf7a' : p >= 34 ? '#c8a84b' : '#e06b63';
+    const renderList = (items) => items.map(({ town, pct }) =>
+      `<div class="stat-row" style="color:${pctColor(pct)}"><span>${town}</span><span class="stat-pct">${pct}%</span></div>`
+    ).join('');
+    document.getElementById('bottom-towns').innerHTML = renderList(bottom);
+  }
 }
 
 async function buildPickerMap() {
