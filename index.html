@@ -2,27 +2,862 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Maine Town Quiz</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
 <!-- Privacy-friendly analytics by Plausible -->
 <script async src="https://plausible.io/js/pa-DKzRWAziU2jErmALNhWWs.js"></script>
 <script>window.plausible=window.plausible||function(){(plausible.q=plausible.q||[]).push(arguments)},plausible.init=plausible.init||function(i){plausible.o=i||{}};plausible.init()</script>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Crimson+Pro:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
 <style>
-  body { font-family: 'Crimson Pro', Georgia, serif; max-width: 400px; margin: 80px auto; padding: 0 20px; }
-  h1 { font-family: 'Playfair Display', Georgia, serif; font-size: 2.8rem; margin-bottom: 32px; }
-  ul { list-style: none; padding: 0; }
-  li { margin-bottom: 16px; }
-  a { font-size: 1.1rem; color: #2a6fa8; }
+  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Crimson+Pro:ital,wght@0,400;0,600;1,400&display=swap');
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --ocean: #1a3a5c;
+    --deep: #0d2237;
+    --parchment: #f5efe0;
+    --gold: #c8a84b;
+    --correct: #5cb87a;
+    --wrong: #7a2820;
+    --reveal: #c8a84b;
+  }
+
+  body {
+    font-family: 'Crimson Pro', Georgia, serif;
+    background: var(--deep);
+    color: var(--parchment);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 16px;
+  }
+
+  h1 {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: clamp(1.6rem, 5vw, 2.4rem);
+    color: var(--gold);
+    text-align: center;
+    margin-bottom: 4px;
+    letter-spacing: 0.02em;
+  }
+
+  .subtitle {
+    font-style: italic;
+    color: #a0b4c8;
+    font-size: 0.95rem;
+    margin-bottom: 20px;
+    text-align: center;
+  }
+
+  #county-picker {
+    width: 100%;
+    max-width: 400px;
+  }
+
+  #county-picker h2 {
+    font-family: 'Playfair Display', Georgia, serif;
+    color: var(--gold);
+    font-size: 1.1rem;
+    margin-bottom: 12px;
+    text-align: center;
+    font-weight: 400;
+  }
+
+  #picker-map {
+    width: 100%;
+    max-width: 500px;
+    background: var(--ocean);
+    border: 4px solid #a0b4c8;
+    border-radius: 8px;
+    overflow: hidden;
+    cursor: pointer;
+  }
+
+  #picker-map svg { width: 100%; height: auto; display: block; }
+
+  .county-shape {
+    fill: #4e6e50;
+    stroke: #7B9E7D;
+    stroke-width: 0.8;
+    transition: fill 0.15s;
+    cursor: pointer;
+  }
+
+  .county-shape.hovered { fill: #a8c9aa; }
+
+  #county-label {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: clamp(1.4rem, 5vw, 2rem);
+    color: var(--parchment);
+    text-align: center;
+    min-height: 1.4em;
+    margin-top: 8px;
+  }
+
+  #prompt-card {
+    background: var(--ocean);
+    border: 4px solid #a0b4c8;
+    border-radius: 8px;
+    padding: 12px 24px;
+    text-align: center;
+    margin-bottom: 4px;
+    width: 100%;
+    max-width: 500px;
+  }
+
+  #prompt-card .label {
+    font-size: 0.8rem;
+    color: #a0b4c8;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 4px;
+  }
+
+  #town-name {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: clamp(1.4rem, 5vw, 2rem);
+    color: var(--parchment);
+  }
+  #town-name.correct { color: #6dbf7a; }
+
+  #feedback {
+    font-size: 1.3rem;
+    height: 2rem;
+    text-align: center;
+    margin-bottom: 4px;
+    overflow: hidden;
+  }
+  #feedback.wrong { color: #e06b63; }
+
+  #map-container {
+    width: 100%;
+    max-width: 500px;
+    background: var(--ocean);
+    border: 4px solid #a0b4c8;
+    border-radius: 8px;
+    overflow: hidden;
+  }
+
+  #map-container svg { width: 100%; height: auto; display: block; }
+
+  .county-bg {
+    fill: #3a5c3c;
+    stroke: none;
+    pointer-events: none;
+  }
+
+  .lake-shape {
+    fill: #2a6fa8;
+    fill-opacity: 0.65;
+    stroke: none;
+    pointer-events: none;
+  }
+
+  .river-shape {
+    fill: none;
+    stroke: #2a6fa8;
+    stroke-opacity: 0.75;
+    stroke-width: 1.2;
+    pointer-events: none;
+  }
+
+
+  .town-shape {
+    fill: #4e6e50;
+    stroke: #7B9E7D;
+    stroke-width: 0.8;
+    cursor: pointer;
+    transition: fill 0.2s;
+  }
+  .town-shape.hovered { fill: #a8c9aa; }
+  .town-shape.correct { fill: var(--correct); cursor: default; }
+  .town-shape.wrong { fill: var(--wrong); }
+  .town-shape.reveal { fill: var(--reveal); cursor: default; }
+  .town-shape.answered { cursor: default; }
+
+  #progress {
+    width: 100%;
+    max-width: 500px;
+    margin-top: 10px;
+    margin-bottom: 8px;
+  }
+
+  .btn {
+    display: none;
+    margin: 12px auto 0;
+    padding: 10px 28px;
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: 1rem;
+    background: var(--gold);
+    color: var(--deep);
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 700;
+  }
+  .btn:hover { background: #dfc060; }
+  .btn.visible { display: block; }
+
+  .btn-outline {
+    background: transparent;
+    color: var(--gold);
+    border: 1px solid var(--gold);
+  }
+  .btn-outline:hover { background: rgba(200,168,75,0.1); color: var(--gold); }
+  #next-btn { display: block; visibility: hidden; margin-top: 6px; }
+  #next-btn.visible { visibility: visible; }
+
+  #progress-bar-track {
+    width: 100%;
+    height: 8px;
+    display: flex;
+    gap: 2px;
+    margin-bottom: 4px;
+  }
+
+  .seg {
+    flex: 1;
+    height: 100%;
+    background: var(--ocean);
+    border-radius: 2px;
+    transition: background 0.2s;
+  }
+  .seg.correct { background: var(--correct); }
+  .seg.wrong { background: #e06b63; }
+  #picker-btn { margin-top: 24px; margin-bottom: 24px; }
+
+  #results {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    width: 100%;
+    max-width: 500px;
+    text-align: center;
+    padding-top: 32px;
+  }
+
+  #results h2 {
+    font-family: 'Playfair Display', Georgia, serif;
+    color: var(--gold);
+    font-size: 1.4rem;
+  }
+
+  .score-big {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: clamp(3rem, 12vw, 5rem);
+    color: var(--gold);
+    line-height: 1;
+  }
+
+  .score-label {
+    font-size: 1.1rem;
+    color: var(--parchment);
+  }
+
+  .results-btns {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    align-items: center;
+  }
+
+  #loading {
+    color: #a0b4c8;
+    text-align: center;
+    padding: 40px;
+    display: none;
+  }
+
+  #error-msg {
+    display: none;
+    color: #e06b63;
+    text-align: center;
+    padding: 20px;
+    max-width: 400px;
+    line-height: 1.8;
+  }
+
+  .back-link {
+    font-size: 1rem;
+    color: #a0b4c8;
+    text-decoration: none;
+    margin-bottom: 8px;
+    display: inline-block;
+    cursor: pointer;
+  }
+  .back-link:hover { color: var(--gold); }
+
+  #mode-prompt {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+    width: 100%;
+    max-width: 400px;
+    text-align: center;
+    padding-top: 16px;
+  }
+
+  #mode-prompt h2 {
+    font-family: 'Playfair Display', Georgia, serif;
+    color: var(--gold);
+    font-size: 1.4rem;
+    font-weight: 400;
+  }
+
+  #mode-prompt p {
+    color: var(--parchment);
+    font-size: 0.95rem;
+  }
+
+  .stat-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 3px 0;
+    font-size: 1.3rem;
+  }
+  .stat-pct { font-family: 'Playfair Display', Georgia, serif; margin-left: 12px; white-space: nowrap; }
+
+  #learn-prompt {
+    display: none;
+    text-align: center;
+    margin-top: 14px;
+  }
+  #learn-prompt a {
+    display: inline-block;
+    padding: 10px 28px;
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: 1rem;
+    font-weight: 700;
+    background: var(--gold);
+    color: var(--deep);
+    border-radius: 6px;
+    text-decoration: none;
+  }
+  #learn-prompt a:hover { background: #dfc060; }
 </style>
 </head>
 <body>
-<h1>Maine Town Quiz</h1>
-<ul>
-  <li><a href="maine-quiz-mvp.html">Click the Town</a> — pick a county, click the correct town</li>
-  <li><a href="maine-quiz-image.html">Name the Town</a> — town is highlighted, type the name</li>
-  <li><a href="maine-town-rollover.html">Rollover Quiz</a> — hover the state map, click to answer</li>
-  <li><a href="../ruairi-math-game/">Ruairi's Times Tables</a> — multiplication practice with doors &amp; fireworks</li>
-</ul>
+
+<div id="county-picker">
+  <h1>Maine Town Quiz</h1>
+  <p class="subtitle">Can you find it on the map?</p>
+  <h2>Choose a county</h2>
+  <div id="picker-map"></div>
+  <div id="county-label"></div>
+  <div id="learn-prompt"><a href="maine-quiz-counties.html">Learn the counties first →</a></div>
+</div>
+
+<div id="mode-prompt">
+  <h2 id="mode-prompt-county"></h2>
+  <p>You've unlocked Challenge Mode for this county</p>
+  <button class="btn visible" onclick="loadCounty(pendingCounty)">Normal Mode</button>
+  <button class="btn visible" onclick="goChallenge(pendingCounty)">Challenge Mode</button>
+  <a class="back-link" onclick="showPicker()">← Back to counties</a>
+</div>
+
+<div id="loading">Loading map data…</div>
+<div id="error-msg"></div>
+
+<div id="quiz-ui" style="display:none; width:100%; max-width:500px; flex-direction:column; align-items:center;">
+  <div id="county-heading" style="font-family:'Playfair Display',Georgia,serif; color:var(--gold); font-size:1.6rem; margin-bottom:8px; text-align:center;"></div>
+  <div id="prompt-card">
+    <div id="town-name">—</div>
+  </div>
+  <div id="feedback"></div>
+  <div id="map-container"></div>
+  <div id="progress">
+    <div id="progress-bar-track"></div>
+  </div>
+  <button id="next-btn" class="btn" onclick="nextQuestion()">Next →</button>
+  <button id="picker-btn" class="btn visible btn-outline" onclick="showPicker()">← Choose Another County</button>
+</div>
+
+<div id="results">
+  <h2 id="results-county">Complete</h2>
+  <div class="score-big" id="score-pct">—</div>
+  <div class="score-label" id="score-detail">—</div>
+  <div id="all-time-best" style="font-size:0.95rem; color:#a0b4c8; margin-top:4px;"></div>
+  <div id="town-stats" style="display:none; width:100%; margin-top:16px;">
+    <div style="width:260px; margin:0 auto;">
+      <div style="color:var(--parchment); font-size:1.3rem; margin-bottom:8px;">Most Missed</div>
+      <div id="bottom-towns"></div>
+    </div>
+  </div>
+  <div class="results-btns" style="margin-top:16px;">
+    <button id="challenge-btn" class="btn" style="display:none" onclick="goChallenge(currentCounty)">Try Challenge Mode</button>
+    <button class="btn visible btn-outline" onclick="startQuiz()">Try Again</button>
+    <button class="btn visible btn-outline" onclick="showPicker()">Choose Another County</button>
+  </div>
+</div>
+
+<script>
+// ---------------------------------------------------------------------------
+// FILTER CONFIGURATION
+// Edit these lists to control which places appear in the quiz.
+// ---------------------------------------------------------------------------
+
+// Never shown in any mode (administrative artifacts, not real places)
+const ALWAYS_EXCLUDE = new Set([
+  'Hancock County Island',
+  'Knox County Island',
+  'Lincoln County Island',
+  'Piscataquis County Island',
+  'Waldo County Island',
+  'Washington County Island',
+]);
+
+// Always shown regardless of other filters (real communities that match exclusion patterns)
+const ALWAYS_INCLUDE = new Set([
+  'Matinicus Isle Plt',      // Knox - inhabited island
+  'Monhegan Island Plt',     // Lincoln - inhabited island
+  'Rangeley Plt',            // Franklin - real town
+  'The Forks Plt',           // Somerset - real town
+  'Grand Lake Stream Plt',   // Washington - real town
+]);
+
+// Excluded in normal mode but would be included in hard mode
+const NORMAL_MODE_EXCLUDE = new Set([
+  // Franklin
+  'Township 6 North of Weld', 'Township D', 'Township E',
+  // Oxford
+  'C Surplus', 'Township C',
+  // Somerset
+  'Rockwood Strip T1 R1 NBKP', 'Rockwood Strip T2 R1 NBKP',
+]);
+
+// ---------------------------------------------------------------------------
+
+let HARD_MODE = false; // toggle for future hard mode
+
+function shouldInclude(f) {
+  const name = (f.properties.TOWN || '').trim();
+  if (!name) return false;
+  if (f.properties.LAND === 'n') return false;
+
+  if (ALWAYS_INCLUDE.has(name)) return true;
+  if (ALWAYS_EXCLUDE.has(name)) return false;
+
+  const upper = name.toUpperCase();
+  if (/UNORG|PATENT/.test(upper)) return false;
+
+  if (!HARD_MODE) {
+    if (NORMAL_MODE_EXCLUDE.has(name)) return false;
+    if (/WELS/.test(upper)) return false;
+    if (/ TWP$| TWP | TOWNSHIP| PLT$| PLT | PLANTATION|GRANT TWP|GRANT$/.test(upper)) return false;
+    if (/^T[A-Z0-9]+ R[A-Z0-9]+/.test(upper)) return false;
+    if (/^T\d+\s/.test(upper)) return false;  // catches T## MD/ED/ND/SD BPP etc.
+    if (/SURPLUS$/.test(upper)) return false;  // catches C Surplus etc.
+  }
+
+  return true;
+}
+
+// ---------------------------------------------------------------------------
+
+let towns = [], features = [], allLandFeatures = [], order = [];
+let lakesFeatures = [], allLakesData = null;
+let riversFeatures = [], allRiversData = null;
+let allCountiesData = null;
+let current = 0, score = 0, answered = false;
+let currentCounty = '';
+let svg, path;
+
+// ---------------------------------------------------------------------------
+// STATS (localStorage)
+// ---------------------------------------------------------------------------
+
+const STATS_KEY = 'maineQuizStats';
+let currentGameAnswers = [];
+
+function loadStats() {
+  try { return JSON.parse(localStorage.getItem(STATS_KEY)) || { countyBest: {}, countyGames: {} }; }
+  catch(e) { return { countyBest: {}, countyGames: {} }; }
+}
+
+function saveStats(stats) {
+  try { localStorage.setItem(STATS_KEY, JSON.stringify(stats)); } catch(e) {}
+}
+
+function recordAnswer(town, correct) {
+  currentGameAnswers.push({ town, correct });
+}
+
+function finalizeGame(county, pct) {
+  const stats = loadStats();
+  if (!stats.countyGames) stats.countyGames = {};
+  if (!stats.countyGames[county]) stats.countyGames[county] = [];
+  stats.countyGames[county].push(currentGameAnswers.slice());
+  if (stats.countyGames[county].length > 5) stats.countyGames[county].shift();
+  if (pct > (stats.countyBest[county] || 0)) stats.countyBest[county] = pct;
+  if (pct === 100) {
+    if (!stats.unlockedCounties) stats.unlockedCounties = [];
+    if (!stats.unlockedCounties.includes(county)) stats.unlockedCounties.push(county);
+  }
+  saveStats(stats);
+  currentGameAnswers = [];
+}
+
+function getTopBottom(stats, county, n = 5) {
+  const games = (stats.countyGames || {})[county] || [];
+  const townsMap = {};
+  for (const game of games) {
+    for (const { town, correct } of game) {
+      if (!townsMap[town]) townsMap[town] = { seen: 0, correct: 0 };
+      townsMap[town].seen++;
+      if (correct) townsMap[town].correct++;
+    }
+  }
+  const entries = Object.entries(townsMap)
+    .filter(([, s]) => s.seen >= 2)
+    .map(([town, s]) => ({ town, pct: Math.round(s.correct / s.seen * 100), seen: s.seen }))
+    .sort((a, b) => a.pct - b.pct || b.seen - a.seen);
+  return { bottom: entries.slice(0, n) };
+}
+
+let pendingCounty = '';
+let learnPromptTimer = null;
+
+function startLearnPromptTimer() {
+  clearTimeout(learnPromptTimer);
+  document.getElementById('learn-prompt').style.display = 'none';
+  learnPromptTimer = setTimeout(() => {
+    document.getElementById('learn-prompt').style.display = 'block';
+  }, 2000);
+}
+
+function cancelLearnPromptTimer() {
+  clearTimeout(learnPromptTimer);
+  document.getElementById('learn-prompt').style.display = 'none';
+}
+
+
+function isChallengeUnlocked(county) {
+  const stats = loadStats();
+  return (stats.unlockedCounties || []).includes(county);
+}
+
+function goChallenge(county) {
+  plausible('Challenge Started', { props: { county: county } });
+  window.location.href = 'maine-quiz-image.html?county=' + encodeURIComponent(county);
+}
+
+function showModePrompt(county) {
+  pendingCounty = county;
+  document.getElementById('county-picker').style.display = 'none';
+  document.getElementById('mode-prompt-county').textContent = county + ' County';
+  document.getElementById('mode-prompt').style.display = 'flex';
+}
+
+function fixWinding(features) {
+  return features.map(f => {
+    const geom = f.geometry;
+    if (!geom) return f;
+    const rev = coords => coords.map(ring => [...ring].reverse());
+    const fixed = geom.type === 'Polygon'
+      ? { ...geom, coordinates: rev(geom.coordinates) }
+      : geom.type === 'MultiPolygon'
+        ? { ...geom, coordinates: geom.coordinates.map(rev) }
+        : geom;
+    return { ...f, geometry: fixed };
+  });
+}
+
+async function loadLakesData() {
+  if (allLakesData) return;
+  try {
+    const res = await fetch('./lakes.geojson');
+    const data = await res.json();
+    allLakesData = fixWinding(data.features || []);
+  } catch(e) {
+    allLakesData = [];
+  }
+}
+
+async function loadRiversData() {
+  if (allRiversData) return;
+  try {
+    const res = await fetch('./rivers.geojson');
+    const data = await res.json();
+    allRiversData = data.features || [];
+  } catch(e) {
+    allRiversData = [];
+  }
+}
+
+function getCountyOutline(county) {
+  if (!allCountiesData) return null;
+  return allCountiesData.find(f => f.properties.COUNTY === county) || null;
+}
+
+function filterLakesForCounty(county) {
+  const outline = getCountyOutline(county);
+  if (!outline) return [];
+  return (allLakesData || []).filter(f => {
+    const centroid = d3.geoCentroid(f);
+    return d3.geoContains(outline, centroid);
+  });
+}
+
+function filterRiversForCounty(county) {
+  const outline = getCountyOutline(county);
+  if (!outline) return [];
+  return (allRiversData || []).filter(f => {
+    const centroid = d3.geoCentroid(f);
+    return d3.geoContains(outline, centroid);
+  });
+}
+
+function showPicker() {
+  document.getElementById('county-picker').style.display = 'block';
+  document.getElementById('mode-prompt').style.display = 'none';
+  startLearnPromptTimer();
+  document.getElementById('quiz-ui').style.display = 'none';
+  document.getElementById('results').style.display = 'none';
+  document.getElementById('loading').style.display = 'none';
+  document.getElementById('error-msg').style.display = 'none';
+}
+
+async function loadCounty(county) {
+  currentCounty = county;
+  document.getElementById('county-picker').style.display = 'none';
+  document.getElementById('mode-prompt').style.display = 'none';
+  document.getElementById('quiz-ui').style.display = 'none';
+  document.getElementById('results').style.display = 'none';
+  document.getElementById('error-msg').style.display = 'none';
+  const loading = document.getElementById('loading');
+  loading.style.display = 'block';
+  loading.textContent = 'Loading ' + county + ' County…';
+
+  try {
+    const base = county.toLowerCase().replace(/ /g, '_');
+    const res = await fetch('./' + base + '.geojson');
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const geo = await res.json();
+
+    allLandFeatures = geo.features.filter(f => f.properties.LAND === 'y');
+    features = geo.features.filter(shouldInclude);
+    towns = [...new Set(features.map(f => f.properties.TOWN))].sort();
+
+    lakesFeatures = [];
+    riversFeatures = [];
+    loading.style.display = 'none';
+    document.getElementById('county-heading').textContent = county + ' County';
+    plausible('County Started', { props: { county: county, mode: 'click' } });
+    buildMap();
+    startQuiz();
+
+    // Load lakes and rivers in background — update map when ready
+    Promise.all([loadLakesData(), loadRiversData()]).then(() => {
+      if (currentCounty !== county) return;
+      lakesFeatures = filterLakesForCounty(county);
+      riversFeatures = filterRiversForCounty(county);
+      updateOverlays();
+    });
+  } catch(e) {
+    loading.style.display = 'none';
+    const err = document.getElementById('error-msg');
+    err.style.display = 'block';
+    err.innerHTML = 'Could not load ' + county + ' County data.<br><small>(' + e.message + ')</small><br><br><a class="back-link" onclick="showPicker()">← Back to county list</a>';
+  }
+}
+
+function buildMap() {
+  document.getElementById('map-container').innerHTML = '';
+  const W = 500, H = 520;
+  const fitFeatures = allLandFeatures.length ? allLandFeatures : features;
+  const projection = d3.geoMercator().fitExtent([[24, 24], [W - 24, H - 24]], { type: 'FeatureCollection', features: fitFeatures });
+  path = d3.geoPath().projection(projection);
+  svg = d3.select('#map-container').append('svg').attr('viewBox', '0 0 ' + W + ' ' + H);
+
+  svg.append('rect').attr('width', W).attr('height', H).attr('fill', '#0d2237');
+
+  svg.append('g').attr('class', 'layer-land')
+    .selectAll('.county-bg').data(allLandFeatures).enter().append('path')
+    .attr('class', 'county-bg').attr('d', path);
+
+  svg.append('g').attr('class', 'layer-towns')
+    .selectAll('.town-shape').data(features).enter().append('path')
+    .attr('class', 'town-shape')
+    .attr('d', path)
+    .attr('data-name', d => d.properties.TOWN)
+    .on('mouseover', function(event, d) {
+      if (answered) return;
+      const name = d.properties.TOWN;
+      d3.selectAll('.town-shape').filter(fd => fd.properties.TOWN === name).classed('hovered', true);
+    })
+    .on('mouseout', function(event, d) {
+      const name = d.properties.TOWN;
+      d3.selectAll('.town-shape').filter(fd => fd.properties.TOWN === name).classed('hovered', false);
+    })
+    .on('click', handleClick);
+
+  svg.append('g').attr('class', 'layer-rivers');
+  svg.append('g').attr('class', 'layer-lakes')
+    .selectAll('.lake-shape').data(lakesFeatures).enter().append('path')
+    .attr('class', 'lake-shape').attr('d', path);
+
+}
+
+function updateOverlays() {
+  svg.select('.layer-rivers').selectAll('.river-shape').data(riversFeatures).enter()
+    .append('path').attr('class', 'river-shape').attr('d', path);
+  svg.select('.layer-lakes').selectAll('.lake-shape').data(lakesFeatures).enter()
+    .append('path').attr('class', 'lake-shape').attr('d', path);
+}
+
+function startQuiz() {
+  document.getElementById('results').style.display = 'none';
+  document.getElementById('quiz-ui').style.display = 'flex';
+  order = [...towns].sort(() => Math.random() - 0.5);
+  current = 0; score = 0; currentGameAnswers = [];
+  d3.selectAll('.town-shape').classed('correct wrong reveal answered', false);
+  const track = document.getElementById('progress-bar-track');
+  track.innerHTML = '';
+  order.forEach((_, i) => {
+    const seg = document.createElement('div');
+    seg.className = 'seg';
+    seg.id = 'seg-' + i;
+    track.appendChild(seg);
+  });
+  showQuestion();
+}
+
+function showQuestion() {
+  answered = false;
+  document.getElementById('next-btn').classList.remove('visible');
+  document.getElementById('feedback').textContent = '';
+  document.getElementById('feedback').className = '';
+  const townNameEl = document.getElementById('town-name');
+  townNameEl.textContent = order[current];
+  townNameEl.classList.remove('correct');
+  d3.selectAll('.town-shape').classed('wrong reveal answered', false);
+}
+
+function handleClick(event, d) {
+  if (answered) return;
+  answered = true;
+  d3.selectAll('.town-shape').classed('hovered', false);
+  const clicked = d.properties.TOWN;
+  const target = order[current];
+  const el = d3.select(event.currentTarget);
+  const isCorrect = clicked === target;
+  const seg = document.getElementById('seg-' + current);
+  if (seg) seg.classList.add(isCorrect ? 'correct' : 'wrong');
+  if (isCorrect) {
+    d3.selectAll('.town-shape')
+      .filter(function(fd) { return fd.properties.TOWN === clicked; })
+      .classed('correct answered', true);
+    const townNameEl = document.getElementById('town-name');
+    townNameEl.textContent = '✓ Correct!';
+    townNameEl.classList.add('correct');
+    document.getElementById('feedback').textContent = '';
+    score++;
+    recordAnswer(target, true);
+    setTimeout(nextQuestion, 1400);
+  } else { // wrong
+    el.classed('wrong answered', true);
+    d3.selectAll('.town-shape')
+      .filter(function(fd) { return fd.properties.TOWN === target; })
+      .classed('reveal answered', true);
+    document.getElementById('feedback').textContent = '✗ That\'s ' + clicked + '.';
+    document.getElementById('feedback').className = 'wrong';
+    recordAnswer(target, false);
+    document.getElementById('next-btn').classList.add('visible');
+  }
+}
+
+function nextQuestion() {
+  current++;
+  if (current >= order.length) showResults();
+  else showQuestion();
+}
+
+function showResults() {
+  document.getElementById('quiz-ui').style.display = 'none';
+  document.getElementById('results').style.display = 'flex';
+  document.getElementById('results-county').textContent = currentCounty + ' County Complete';
+
+  const pct = Math.round((score / order.length) * 100);
+  const pctColor = p => p >= 67 ? 'var(--correct)' : p >= 34 ? 'var(--gold)' : '#e06b63';
+  const scorePctEl = document.getElementById('score-pct');
+  scorePctEl.textContent = pct + '%';
+  scorePctEl.style.color = pctColor(pct);
+  document.getElementById('score-detail').textContent = score + ' out of ' + order.length + ' towns correct';
+
+  plausible('County Completed', { props: { county: currentCounty, score: pct + '%', mode: 'click' } });
+
+  // All-time best for this county
+  finalizeGame(currentCounty, pct);
+
+  // Challenge mode unlock
+  const challengeBtn = document.getElementById('challenge-btn');
+  challengeBtn.style.display = pct === 100 ? 'block' : 'none';
+  const stats = loadStats();
+  const best = stats.countyBest[currentCounty] || pct;
+  const bestEl = document.getElementById('all-time-best');
+  bestEl.textContent = pct >= best ? 'New personal best!' : 'All-time best: ' + best + '%';
+  bestEl.style.color = pct >= best ? 'var(--correct)' : 'var(--parchment)';
+  bestEl.style.fontSize = pct >= best ? '1.4rem' : '0.95rem';
+  bestEl.style.fontFamily = pct >= best ? "'Playfair Display', Georgia, serif" : '';
+
+  // Top / bottom towns
+  const { bottom } = getTopBottom(stats, currentCounty);
+  const statsEl = document.getElementById('town-stats');
+
+  if (bottom.length === 0 || pct === 100) {
+    statsEl.style.display = 'none';
+  } else {
+    statsEl.style.display = 'block';
+    const pctColor = p => p >= 67 ? '#6dbf7a' : p >= 34 ? '#c8a84b' : '#e06b63';
+    const renderList = (items) => items.map(({ town, pct }) =>
+      `<div class="stat-row" style="color:${pctColor(pct)}"><span>${town}</span><span class="stat-pct">${pct}%</span></div>`
+    ).join('');
+    document.getElementById('bottom-towns').innerHTML = renderList(bottom);
+  }
+}
+
+async function buildPickerMap() {
+  const res = await fetch('./counties.geojson');
+  const raw = await res.json();
+  const geo = { ...raw, features: fixWinding(raw.features) };
+  allCountiesData = geo.features;
+  const W = 500, H = 560;
+  const projection = d3.geoMercator().fitExtent([[16, 16], [W - 16, H - 16]], geo);
+  const pickerPath = d3.geoPath().projection(projection);
+  const pickerSvg = d3.select('#picker-map').append('svg').attr('viewBox', '0 0 ' + W + ' ' + H);
+  pickerSvg.append('rect').attr('width', W).attr('height', H).attr('fill', '#0d2237');
+  pickerSvg.selectAll('.county-shape')
+    .data(geo.features).enter().append('path')
+    .attr('class', 'county-shape')
+    .attr('d', pickerPath)
+    .on('mouseover', function(event, d) {
+      d3.select(this).classed('hovered', true);
+      document.getElementById('county-label').textContent = d.properties.COUNTY;
+    })
+    .on('mouseout', function() {
+      d3.select(this).classed('hovered', false);
+      document.getElementById('county-label').textContent = '';
+    })
+    .on('click', function(event, d) {
+      d3.selectAll('.county-shape').classed('hovered', false);
+      const county = d.properties.COUNTY;
+      document.getElementById('county-label').textContent = county;
+      cancelLearnPromptTimer();
+      if (isChallengeUnlocked(county)) {
+        setTimeout(() => showModePrompt(county), 350);
+      } else {
+        setTimeout(() => loadCounty(county), 350);
+      }
+    });
+}
+
+buildPickerMap();
+startLearnPromptTimer();
+</script>
 </body>
 </html>
