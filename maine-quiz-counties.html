@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Maine County Quiz</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Crimson+Pro:ital,wght@0,400;0,600;1,400&display=swap');
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --ocean: #1a3a5c;
+    --deep: #0d2237;
+    --parchment: #f5efe0;
+    --gold: #c8a84b;
+    --correct: #5cb87a;
+    --wrong: #7a2820;
+    --reveal: #c8a84b;
+  }
+
+  body {
+    font-family: 'Crimson Pro', Georgia, serif;
+    background: var(--deep);
+    color: var(--parchment);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 16px;
+  }
+
+  h1 {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: clamp(1.2rem, 4vw, 1.8rem);
+    color: var(--gold);
+    text-align: center;
+    margin-bottom: 4px;
+    letter-spacing: 0.02em;
+  }
+
+  .subtitle {
+    font-style: italic;
+    color: #a0b4c8;
+    font-size: 0.95rem;
+    margin-bottom: 20px;
+    text-align: center;
+  }
+
+  #prompt-card {
+    background: var(--ocean);
+    border: 4px solid #a0b4c8;
+    border-radius: 8px;
+    padding: 12px 24px;
+    text-align: center;
+    margin-bottom: 4px;
+    width: 100%;
+    max-width: 500px;
+  }
+
+  #county-name {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: clamp(1.4rem, 5vw, 2rem);
+    color: var(--parchment);
+  }
+  #county-name.correct { color: #6dbf7a; }
+
+  #feedback {
+    font-size: 1.3rem;
+    height: 2rem;
+    text-align: center;
+    margin-bottom: 4px;
+    overflow: hidden;
+  }
+  #feedback.wrong { color: #e06b63; }
+
+  #map-container {
+    width: 100%;
+    max-width: 500px;
+    background: var(--ocean);
+    border: 4px solid #a0b4c8;
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  #map-container svg { width: 100%; height: auto; display: block; }
+
+  .county-shape {
+    fill: #4e6e50;
+    stroke: #7B9E7D;
+    stroke-width: 0.8;
+    cursor: pointer;
+    transition: fill 0.2s;
+  }
+  .county-shape.hovered { fill: #a8c9aa; }
+  .county-shape.correct { fill: var(--correct); cursor: default; }
+  .county-shape.wrong   { fill: var(--wrong); }
+  .county-shape.reveal  { fill: var(--reveal); cursor: default; }
+  .county-shape.answered { cursor: default; }
+
+  #progress {
+    width: 100%;
+    max-width: 500px;
+    margin-top: 10px;
+    margin-bottom: 8px;
+  }
+
+  #progress-bar-track {
+    width: 100%;
+    height: 8px;
+    display: flex;
+    gap: 2px;
+    margin-bottom: 4px;
+  }
+
+  .seg {
+    flex: 1;
+    height: 100%;
+    background: var(--ocean);
+    border-radius: 2px;
+    transition: background 0.2s;
+  }
+  .seg.correct { background: var(--correct); }
+  .seg.wrong   { background: #e06b63; }
+
+  .btn {
+    display: none;
+    margin: 12px auto 0;
+    padding: 10px 28px;
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: 1rem;
+    background: var(--gold);
+    color: var(--deep);
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 700;
+  }
+  .btn:hover { background: #dfc060; }
+  .btn.visible { display: block; }
+
+  .btn-outline {
+    background: transparent;
+    color: var(--gold);
+    border: 1px solid var(--gold);
+  }
+  .btn-outline:hover { background: rgba(200,168,75,0.1); color: var(--gold); }
+
+  #next-btn { display: block; visibility: hidden; margin-top: 6px; }
+  #next-btn.visible { visibility: visible; }
+
+  #results {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    width: 100%;
+    max-width: 500px;
+    text-align: center;
+    padding-top: 32px;
+  }
+
+  #results h2 {
+    font-family: 'Playfair Display', Georgia, serif;
+    color: var(--gold);
+    font-size: 1.4rem;
+  }
+
+  .score-big {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: clamp(3rem, 12vw, 5rem);
+    color: var(--gold);
+    line-height: 1;
+  }
+
+  .score-label { font-size: 1.1rem; color: var(--parchment); }
+  .results-btns { display: flex; flex-direction: column; gap: 10px; align-items: center; }
+
+  #loading { color: #a0b4c8; text-align: center; padding: 40px; }
+
+  .back-link {
+    font-size: 1rem;
+    color: #a0b4c8;
+    text-decoration: none;
+    display: inline-block;
+    cursor: pointer;
+  }
+  .back-link:hover { color: var(--gold); }
+</style>
+</head>
+<body>
+
+<h1>Maine County Quiz</h1>
+<p class="subtitle">Can you find it on the map?</p>
+
+<div id="loading">Loading map…</div>
+
+<div id="quiz-ui" style="display:none; width:100%; max-width:500px; flex-direction:column; align-items:center;">
+  <div id="prompt-card">
+    <div id="county-name">—</div>
+  </div>
+  <div id="feedback"></div>
+  <div id="map-container"></div>
+  <div id="progress">
+    <div id="progress-bar-track"></div>
+  </div>
+  <button id="next-btn" class="btn" onclick="nextQuestion()">Next →</button>
+  <a class="back-link" href="index.html" style="margin-top:20px;">← Back to menu</a>
+</div>
+
+<div id="results">
+  <h2>Complete!</h2>
+  <div class="score-big" id="score-pct">—</div>
+  <div class="score-label" id="score-detail">—</div>
+  <div class="results-btns" style="margin-top:16px;">
+    <button class="btn visible" onclick="startQuiz()">Try Again</button>
+    <a class="btn btn-outline visible" href="index.html">← Back to menu</a>
+  </div>
+</div>
+
+<script>
+let features = [], order = [], current = 0, score = 0, answered = false;
+let svg, path;
+
+function fixWinding(features) {
+  return features.map(f => {
+    const geom = f.geometry;
+    if (!geom) return f;
+    const rev = coords => coords.map(ring => [...ring].reverse());
+    const fixed = geom.type === 'Polygon'
+      ? { ...geom, coordinates: rev(geom.coordinates) }
+      : geom.type === 'MultiPolygon'
+        ? { ...geom, coordinates: geom.coordinates.map(rev) }
+        : geom;
+    return { ...f, geometry: fixed };
+  });
+}
+
+async function init() {
+  const res = await fetch('./counties.geojson');
+  const raw = await res.json();
+  features = fixWinding(raw.features);
+  document.getElementById('loading').style.display = 'none';
+  buildMap();
+  startQuiz();
+}
+
+function buildMap() {
+  const W = 500, H = 560;
+  const projection = d3.geoMercator().fitExtent([[16, 16], [W - 16, H - 16]], { type: 'FeatureCollection', features });
+  path = d3.geoPath().projection(projection);
+  svg = d3.select('#map-container').append('svg').attr('viewBox', '0 0 ' + W + ' ' + H);
+  svg.append('rect').attr('width', W).attr('height', H).attr('fill', '#0d2237');
+
+  svg.selectAll('.county-shape')
+    .data(features).enter().append('path')
+    .attr('class', 'county-shape')
+    .attr('d', path)
+    .attr('data-county', d => d.properties.COUNTY)
+    .on('mouseover', function(event, d) {
+      if (answered) return;
+      d3.select(this).classed('hovered', true);
+    })
+    .on('mouseout', function() {
+      d3.select(this).classed('hovered', false);
+    })
+    .on('click', handleClick);
+}
+
+function startQuiz() {
+  document.getElementById('results').style.display = 'none';
+  document.getElementById('quiz-ui').style.display = 'flex';
+  order = features.map(f => f.properties.COUNTY).sort(() => Math.random() - 0.5);
+  current = 0; score = 0;
+  d3.selectAll('.county-shape').classed('correct wrong reveal answered', false);
+  const track = document.getElementById('progress-bar-track');
+  track.innerHTML = '';
+  order.forEach((_, i) => {
+    const seg = document.createElement('div');
+    seg.className = 'seg';
+    seg.id = 'seg-' + i;
+    track.appendChild(seg);
+  });
+  showQuestion();
+}
+
+function showQuestion() {
+  answered = false;
+  document.getElementById('next-btn').classList.remove('visible');
+  document.getElementById('feedback').textContent = '';
+  document.getElementById('feedback').className = '';
+  const countyNameEl = document.getElementById('county-name');
+  countyNameEl.textContent = order[current];
+  countyNameEl.classList.remove('correct');
+  d3.selectAll('.county-shape').classed('wrong reveal answered', false);
+}
+
+function handleClick(event, d) {
+  if (answered) return;
+  answered = true;
+  d3.selectAll('.county-shape').classed('hovered', false);
+
+  const clicked = d.properties.COUNTY;
+  const target = order[current];
+  const isCorrect = clicked === target;
+
+  const seg = document.getElementById('seg-' + current);
+  if (seg) seg.classList.add(isCorrect ? 'correct' : 'wrong');
+
+  if (isCorrect) {
+    d3.select(event.currentTarget).classed('correct answered', true);
+    const countyNameEl = document.getElementById('county-name');
+    countyNameEl.textContent = '✓ Correct!';
+    countyNameEl.classList.add('correct');
+    score++;
+    setTimeout(nextQuestion, 1400);
+  } else {
+    d3.select(event.currentTarget).classed('wrong answered', true);
+    d3.selectAll('.county-shape')
+      .filter(fd => fd.properties.COUNTY === target)
+      .classed('reveal answered', true);
+    document.getElementById('feedback').textContent = '✗ That\'s ' + clicked + '.';
+    document.getElementById('feedback').className = 'wrong';
+    document.getElementById('next-btn').classList.add('visible');
+  }
+}
+
+function nextQuestion() {
+  current++;
+  if (current >= order.length) showResults();
+  else showQuestion();
+}
+
+function showResults() {
+  document.getElementById('quiz-ui').style.display = 'none';
+  document.getElementById('results').style.display = 'flex';
+  const pct = Math.round((score / order.length) * 100);
+  const pctColor = p => p >= 67 ? 'var(--correct)' : p >= 34 ? 'var(--gold)' : '#e06b63';
+  const scorePctEl = document.getElementById('score-pct');
+  scorePctEl.textContent = pct + '%';
+  scorePctEl.style.color = pctColor(pct);
+  document.getElementById('score-detail').textContent = score + ' out of ' + order.length + ' counties correct';
+}
+
+init();
+</script>
+</body>
+</html>

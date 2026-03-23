@@ -318,6 +318,24 @@
     font-size: 1.3rem;
   }
   .stat-pct { font-family: 'Playfair Display', Georgia, serif; margin-left: 12px; white-space: nowrap; }
+
+  #learn-prompt {
+    display: none;
+    text-align: center;
+    margin-top: 14px;
+  }
+  #learn-prompt a {
+    display: inline-block;
+    padding: 10px 28px;
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: 1rem;
+    font-weight: 700;
+    background: var(--gold);
+    color: var(--deep);
+    border-radius: 6px;
+    text-decoration: none;
+  }
+  #learn-prompt a:hover { background: #dfc060; }
 </style>
 </head>
 <body>
@@ -329,6 +347,7 @@
   <h2>Choose a county</h2>
   <div id="picker-map"></div>
   <div id="county-label"></div>
+  <div id="learn-prompt"><a href="maine-quiz-counties.html">Learn the counties first →</a></div>
 </div>
 
 <div id="mode-prompt">
@@ -499,6 +518,20 @@ function getTopBottom(stats, county, n = 5) {
 }
 
 let pendingCounty = '';
+let learnPromptTimer = null;
+
+function startLearnPromptTimer() {
+  clearTimeout(learnPromptTimer);
+  document.getElementById('learn-prompt').style.display = 'none';
+  learnPromptTimer = setTimeout(() => {
+    document.getElementById('learn-prompt').style.display = 'block';
+  }, 2000);
+}
+
+function cancelLearnPromptTimer() {
+  clearTimeout(learnPromptTimer);
+  document.getElementById('learn-prompt').style.display = 'none';
+}
 
 
 function isChallengeUnlocked(county) {
@@ -579,6 +612,7 @@ function filterRiversForCounty(county) {
 function showPicker() {
   document.getElementById('county-picker').style.display = 'block';
   document.getElementById('mode-prompt').style.display = 'none';
+  startLearnPromptTimer();
   document.getElementById('quiz-ui').style.display = 'none';
   document.getElementById('results').style.display = 'none';
   document.getElementById('loading').style.display = 'none';
@@ -806,6 +840,7 @@ async function buildPickerMap() {
       d3.selectAll('.county-shape').classed('hovered', false);
       const county = d.properties.COUNTY;
       document.getElementById('county-label').textContent = county;
+      cancelLearnPromptTimer();
       if (isChallengeUnlocked(county)) {
         setTimeout(() => showModePrompt(county), 350);
       } else {
@@ -815,6 +850,7 @@ async function buildPickerMap() {
 }
 
 buildPickerMap();
+startLearnPromptTimer();
 </script>
 </body>
 </html>
