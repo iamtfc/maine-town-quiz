@@ -5,6 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Maine Town Quiz</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+<!-- Privacy-friendly analytics by Plausible -->
+<script async src="https://plausible.io/js/pa-DKzRWAziU2jErmALNhWWs.js"></script>
+<script>window.plausible=window.plausible||function(){(plausible.q=plausible.q||[]).push(arguments)},plausible.init=plausible.init||function(i){plausible.o=i||{}};plausible.init()</script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Crimson+Pro:ital,wght@0,400;0,600;1,400&display=swap');
 
@@ -540,6 +543,7 @@ function isChallengeUnlocked(county) {
 }
 
 function goChallenge(county) {
+  plausible('Challenge Started', { props: { county: county } });
   window.location.href = 'maine-quiz-image.html?county=' + encodeURIComponent(county);
 }
 
@@ -643,6 +647,7 @@ async function loadCounty(county) {
     riversFeatures = [];
     loading.style.display = 'none';
     document.getElementById('county-heading').textContent = county + ' County';
+    plausible('County Started', { props: { county: county, mode: 'click' } });
     buildMap();
     startQuiz();
 
@@ -783,6 +788,8 @@ function showResults() {
   scorePctEl.textContent = pct + '%';
   scorePctEl.style.color = pctColor(pct);
   document.getElementById('score-detail').textContent = score + ' out of ' + order.length + ' towns correct';
+
+  plausible('County Completed', { props: { county: currentCounty, score: pct + '%', mode: 'click' } });
 
   // All-time best for this county
   finalizeGame(currentCounty, pct);

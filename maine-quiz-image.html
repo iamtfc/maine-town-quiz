@@ -5,6 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Maine Town Quiz — Name That Town</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+<!-- Privacy-friendly analytics by Plausible -->
+<script async src="https://plausible.io/js/pa-DKzRWAziU2jErmALNhWWs.js"></script>
+<script>window.plausible=window.plausible||function(){(plausible.q=plausible.q||[]).push(arguments)},plausible.init=plausible.init||function(i){plausible.o=i||{}};plausible.init()</script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Crimson+Pro:ital,wght@0,400;0,600;1,400&display=swap');
 
@@ -323,6 +326,7 @@ function shouldInclude(f) {
 
 // ---------------------------------------------------------------------------
 
+const isChallenge = !!new URLSearchParams(window.location.search).get('county');
 let allMaineTowns = []; // full statewide list for autocomplete
 let countyTowns = [], features = [], allLandFeatures = [];
 let lakesFeatures = [], allLakesData = null;
@@ -431,6 +435,7 @@ async function loadCounty(county) {
     riversFeatures = [];
     loading.style.display = 'none';
     document.getElementById('county-heading').textContent = county + ' County';
+    plausible('County Started', { props: { county: county, mode: isChallenge ? 'challenge' : 'name' } });
     buildMap();
     startQuiz();
 
@@ -584,6 +589,7 @@ function showResults() {
   const pct = Math.round((score / order.length) * 100);
   document.getElementById('score-pct').textContent = pct + '%';
   document.getElementById('score-detail').textContent = score + ' out of ' + order.length + ' towns correct';
+  plausible('County Completed', { props: { county: currentCounty, score: pct + '%', mode: isChallenge ? 'challenge' : 'name' } });
 }
 
 // ---------------------------------------------------------------------------
