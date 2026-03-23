@@ -708,7 +708,11 @@ async function buildPickerMap() {
     });
 }
 
-buildPickerMap();
+const paramCounty = new URLSearchParams(window.location.search).get('county');
+if (paramCounty) document.getElementById('county-picker').style.display = 'none';
+buildPickerMap().then(() => {
+  if (paramCounty) loadCounty(paramCounty);
+});
 loadAllTowns();
 </script>
 </body>

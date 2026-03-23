@@ -287,6 +287,29 @@
   }
   .back-link:hover { color: var(--gold); }
 
+  #mode-prompt {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+    width: 100%;
+    max-width: 400px;
+    text-align: center;
+    padding-top: 16px;
+  }
+
+  #mode-prompt h2 {
+    font-family: 'Playfair Display', Georgia, serif;
+    color: var(--gold);
+    font-size: 1.4rem;
+    font-weight: 400;
+  }
+
+  #mode-prompt p {
+    color: var(--parchment);
+    font-size: 0.95rem;
+  }
+
   .stat-row {
     display: flex;
     justify-content: space-between;
@@ -306,6 +329,14 @@
   <h2>Choose a county</h2>
   <div id="picker-map"></div>
   <div id="county-label"></div>
+</div>
+
+<div id="mode-prompt">
+  <h2 id="mode-prompt-county"></h2>
+  <p>You've unlocked Challenge Mode for this county</p>
+  <button class="btn visible" onclick="loadCounty(pendingCounty)">Normal Mode</button>
+  <button class="btn visible" onclick="goChallenge(pendingCounty)">Challenge Mode</button>
+  <a class="back-link" onclick="showPicker()">← Back to counties</a>
 </div>
 
 <div id="loading">Loading map data…</div>
@@ -337,7 +368,8 @@
     </div>
   </div>
   <div class="results-btns" style="margin-top:16px;">
-    <button class="btn visible" onclick="startQuiz()">Try Again</button>
+    <button id="challenge-btn" class="btn" style="display:none" onclick="goChallenge(currentCounty)">Try Challenge Mode</button>
+    <button class="btn visible btn-outline" onclick="startQuiz()">Try Again</button>
     <button class="btn visible btn-outline" onclick="showPicker()">Choose Another County</button>
   </div>
 </div>
@@ -441,6 +473,10 @@ function finalizeGame(county, pct) {
   stats.countyGames[county].push(currentGameAnswers.slice());
   if (stats.countyGames[county].length > 5) stats.countyGames[county].shift();
   if (pct > (stats.countyBest[county] || 0)) stats.countyBest[county] = pct;
+  if (pct === 100) {
+    if (!stats.unlockedCounties) stats.unlockedCounties = [];
+    if (!stats.unlockedCounties.includes(county)) stats.unlockedCounties.push(county);
+  }
   saveStats(stats);
   currentGameAnswers = [];
 }
@@ -460,6 +496,25 @@ function getTopBottom(stats, county, n = 5) {
     .map(([town, s]) => ({ town, pct: Math.round(s.correct / s.seen * 100), seen: s.seen }))
     .sort((a, b) => a.pct - b.pct || b.seen - a.seen);
   return { bottom: entries.slice(0, n) };
+}
+
+let pendingCounty = '';
+
+
+function isChallengeUnlocked(county) {
+  const stats = loadStats();
+  return (stats.unlockedCounties || []).includes(county);
+}
+
+function goChallenge(county) {
+  window.location.href = 'maine-quiz-image.html?county=' + encodeURIComponent(county);
+}
+
+function showModePrompt(county) {
+  pendingCounty = county;
+  document.getElementById('county-picker').style.display = 'none';
+  document.getElementById('mode-prompt-county').textContent = county + ' County';
+  document.getElementById('mode-prompt').style.display = 'flex';
 }
 
 function fixWinding(features) {
@@ -523,6 +578,7 @@ function filterRiversForCounty(county) {
 
 function showPicker() {
   document.getElementById('county-picker').style.display = 'block';
+  document.getElementById('mode-prompt').style.display = 'none';
   document.getElementById('quiz-ui').style.display = 'none';
   document.getElementById('results').style.display = 'none';
   document.getElementById('loading').style.display = 'none';
@@ -696,6 +752,10 @@ function showResults() {
 
   // All-time best for this county
   finalizeGame(currentCounty, pct);
+
+  // Challenge mode unlock
+  const challengeBtn = document.getElementById('challenge-btn');
+  challengeBtn.style.display = pct === 100 ? 'block' : 'none';
   const stats = loadStats();
   const best = stats.countyBest[currentCounty] || pct;
   const bestEl = document.getElementById('all-time-best');
@@ -708,7 +768,7 @@ function showResults() {
   const { bottom } = getTopBottom(stats, currentCounty);
   const statsEl = document.getElementById('town-stats');
 
-  if (top.length === 0) {
+  if (bottom.length === 0) {
     statsEl.style.display = 'none';
   } else {
     statsEl.style.display = 'block';
@@ -746,7 +806,11 @@ async function buildPickerMap() {
       d3.selectAll('.county-shape').classed('hovered', false);
       const county = d.properties.COUNTY;
       document.getElementById('county-label').textContent = county;
-      setTimeout(() => loadCounty(county), 350);
+      if (isChallengeUnlocked(county)) {
+        setTimeout(() => showModePrompt(county), 350);
+      } else {
+        setTimeout(() => loadCounty(county), 350);
+      }
     });
 }
 
