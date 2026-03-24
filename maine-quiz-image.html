@@ -329,7 +329,7 @@ let countyTowns = [], features = [], allLandFeatures = [];
 let lakesFeatures = [], allLakesData = null;
 let riversFeatures = [], allRiversData = null;
 let allCountiesData = null;
-let order = [], current = 0, score = 0, answered = false;
+let order = [], current = 0, score = 0, answered = false, nextTimer = null;
 let currentCounty = '';
 let svg, path;
 
@@ -482,6 +482,7 @@ function updateOverlays() {
 }
 
 function startQuiz() {
+  clearTimeout(nextTimer); nextTimer = null;
   document.getElementById('results').style.display = 'none';
   document.getElementById('quiz-ui').style.display = 'flex';
   order = [...countyTowns].sort(() => Math.random() - 0.5);
@@ -554,7 +555,7 @@ function submitGuess(guess) {
     fb.textContent = '✓ Correct!';
     fb.className = 'correct';
     score++;
-    setTimeout(nextQuestion, 1400);
+    nextTimer = setTimeout(nextQuestion, 1400);
   } else {
     // Mark the guessed town wrong if it matched a real town
     const guessedTown = allMaineTowns.find(t => t.toLowerCase() === normalized.toLowerCase());

@@ -463,7 +463,7 @@ let towns = [], features = [], allLandFeatures = [], order = [];
 let lakesFeatures = [], allLakesData = null;
 let riversFeatures = [], allRiversData = null;
 let allCountiesData = null;
-let current = 0, score = 0, answered = false;
+let current = 0, score = 0, answered = false, nextTimer = null;
 let currentCounty = '';
 let svg, path;
 
@@ -711,6 +711,7 @@ function updateOverlays() {
 }
 
 function startQuiz() {
+  clearTimeout(nextTimer); nextTimer = null;
   document.getElementById('results').style.display = 'none';
   document.getElementById('quiz-ui').style.display = 'flex';
   order = [...towns].sort(() => Math.random() - 0.5);
@@ -758,7 +759,7 @@ function handleClick(event, d) {
     document.getElementById('feedback').textContent = '';
     score++;
     recordAnswer(target, true);
-    setTimeout(nextQuestion, 1400);
+    nextTimer = setTimeout(nextQuestion, 1400);
   } else { // wrong
     el.classed('wrong answered', true);
     d3.selectAll('.town-shape')
