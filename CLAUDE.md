@@ -75,6 +75,16 @@ Game records: `{ ts: Date.now(), answers: [{ town, correct }] }`. Old records (f
 - Coastal counties have large file sizes due to coastal detail; Knox (~6.5 MB) and Washington (~9.7 MB) are the heaviest
 - Future work: geometry simplification for large files, water masking overlay
 
+## Planned: Curated Challenges
+
+A future `challenges.html` page where players can browse and attempt themed challenges — e.g. "Find all towns with 'Port' in the name", "Match towns with their New England namesakes (Portland / New Portland)", "Towns named after foreign countries".
+
+**Data:** A `challenges.json` file defining each challenge with a name, description, and either a filter rule (algorithmic, e.g. name contains "Port") or an explicit curated town list. Some challenges can be computed from town names; others (countries, presidents, etc.) require hand-curation.
+
+**Gameplay:** Likely a full-state map showing only the matching towns, rather than county-by-county. Matching/pairing challenges (Portland ↔ New Portland) may need a different interaction model than map-clicking.
+
+**Access:** Available from the start — not locked behind county progression. These are a different dimension of the game, not a harder difficulty tier.
+
 ## Planned: Advanced Mode
 
 A future difficulty tier beyond Challenge Mode would include currently-excluded places (unorganized territories, named wilderness areas, etc.). The intended approach:
