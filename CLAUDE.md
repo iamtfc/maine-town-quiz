@@ -74,3 +74,12 @@ Game records: `{ ts: Date.now(), answers: [{ town, correct }] }`. Old records (f
 - `counties.geojson` — dissolved county outlines, used by `maine-quiz-counties.html`
 - Coastal counties have large file sizes due to coastal detail; Knox (~6.5 MB) and Washington (~9.7 MB) are the heaviest
 - Future work: geometry simplification for large files, water masking overlay
+
+## Planned: Advanced Mode
+
+A future difficulty tier beyond Challenge Mode would include currently-excluded places (unorganized territories, named wilderness areas, etc.). The intended approach:
+
+- Tag eligible features with `HARD_MODE: true` directly in the GeoJSON rather than inferring inclusion from name/type patterns
+- This gives precise control — not all excluded places are equally guessable; some (Baxter State Park area, Rangeley Lakes region) are recognizable, others are obscure survey artifacts
+- Filter logic becomes explicit: normal/challenge use `shouldInclude(f)`, advanced adds `|| f.properties.HARD_MODE === true`
+- Work required: review excluded features county by county and tag the ones worth including; this only needs to happen once per county
