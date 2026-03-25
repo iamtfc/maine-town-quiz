@@ -4,41 +4,73 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Overview
 
-A single-page browser quiz game where users identify Maine towns on a map by clicking on the correct county polygon. No build step, no dependencies to install — open `maine-quiz-mvp.html` directly in a browser (or serve it with a local HTTP server since it fetches `.geojson` files via `fetch()`).
+A browser-based quiz game where users identify Maine towns on a map. Three difficulty tiers, all single-file with no build step — serve with a local HTTP server since files fetch `.geojson` data via `fetch()`.
 
-**Live site:** https://iamtfc.github.io/maine-town-quiz/maine-quiz-mvp.html
+**Live site:** https://iamtfc.github.io/maine-town-quiz/
+
+## Files
+
+- **`index.html`** — Main town quiz (Normal Mode). County picker → click towns on map.
+- **`maine-quiz-image.html`** — Challenge Mode. Type town names; unlocked by scoring 100% on a county in Normal Mode.
+- **`maine-quiz-counties.html`** — County learning quiz. Click the correct county on a map of all 16 Maine counties.
+- **`stats.html`** — Progress dashboard. County grid with best scores, score history chart, town accuracy heat map.
 
 ## Running locally
 
-Because `loadCounty()` uses `fetch('./filename.geojson')`, the file must be served over HTTP, not opened as a `file://` URL. Any static server works:
+Because `loadCounty()` uses `fetch('./filename.geojson')`, files must be served over HTTP, not opened as `file://` URLs. Any static server works:
 
 ```bash
 python -m http.server 8080
-# then open http://localhost:8080/maine-quiz-mvp.html
+# then open http://localhost:8080/
 ```
 
 ## Architecture
 
-Everything lives in `maine-quiz-mvp.html` — CSS, HTML, and JavaScript are all inline in one file. There is no framework, no bundler, and no separate JS modules.
+Everything is inline (CSS, HTML, JS) in each file. No framework, no bundler, no separate JS modules.
 
 **External dependency:** D3 v7 loaded from CDN (`cdnjs.cloudflare.com`).
 
-**Data:** One `.geojson` file per Maine county (16 total), named `{county_lowercase}.geojson`. Each file contains polygon features with a `TOWN` property. Features are filtered on load to exclude unorganized territories, townships, plantations, patents, and grants.
+**Analytics:** Plausible (privacy-friendly). Custom events: `County Started` (props: `county`, `mode`), `County Completed` (props: `county`, `score`, `mode`), `Challenge Started` (props: `county`).
 
-**Quiz flow:**
-1. `showPicker()` — county selection screen
-2. `loadCounty(county)` — fetches the county's GeoJSON, filters features, calls `buildMap()` then `startQuiz()`
-3. `buildMap()` — uses D3's `geoMercator` + `geoPath` to render SVG polygons; each polygon gets a `click` handler
-4. `startQuiz()` — shuffles town names into `order[]`, resets state, calls `showQuestion()`
-5. `handleClick(event, d)` — compares clicked town to `order[current]`; marks correct/wrong/reveal CSS classes; shows feedback
-6. `nextQuestion()` / `showResults()` — advances through the shuffled list, then shows score screen
+## Quiz flow (index.html)
 
-**Key global state:** `towns[]`, `features[]`, `order[]`, `current`, `score`, `answered`, `currentCounty`, `svg`, `path`
+1. `showPicker()` — county selection screen with interactive map
+2. `loadCounty(county)` — fetches county GeoJSON, filters features, builds map and starts quiz
+3. `buildMap()` — D3 `geoMercator` + `geoPath` renders SVG layers: background rect → land layer (`allLandFeatures`) → town polygons → lakes → rivers
+4. `startQuiz()` — shuffles town names into `order[]`, resets state
+5. `handleClick(event, d)` — compares clicked town to `order[current]`; applies correct/wrong/reveal CSS classes
+6. `nextQuestion()` / `showResults()` — advances through list, then shows score screen with stats
+
+**Key global state:** `towns[]`, `features[]`, `allLandFeatures[]`, `order[]`, `current`, `score`, `answered`, `currentCounty`, `svg`, `path`
+
+## Town filtering
+
+Filtering logic is duplicated across `index.html`, `maine-quiz-image.html`, and `stats.html` — if rules change, update all three.
+
+- `ALWAYS_EXCLUDE` — county-level island artifacts (e.g. "Knox County Island")
+- `ALWAYS_INCLUDE` — real inhabited islands that would otherwise be excluded by regex
+- `NORMAL_MODE_EXCLUDE` — unorganized territories, townships, plantations, patents, grants (excluded by regex on `TOWN` name and `TYPE` property)
+- `LAND === 'n'` features are always excluded (water polygons)
+- `allLandFeatures` (all `LAND === 'y'`) renders as a dark background layer; quiz-eligible towns render on top, making excluded territories visible in a darker shade
+
+## Stats & localStorage
+
+All stats stored under key `maineQuizStats`. Structure:
+```
+{
+  countyBest: { [county]: pct },         // normal mode best %
+  countyGames: { [county]: [...] },      // normal mode game history (last 5)
+  challengeBest: { [county]: pct },      // challenge mode best %
+  challengeGames: { [county]: [...] },   // challenge mode game history (last 5)
+  townStats: { [town]: { seen, correct } }
+}
+```
+Game records: `{ ts: Date.now(), answers: [{ town, correct }] }`. Old records (flat arrays) handled via `gameAnswers(game)` helper: `game.answers || game`.
 
 ## GeoJSON data notes
 
 - Property keys: `TOWN`, `COUNTY`, `TYPE`, `ISLAND`, `LAND`
-- Source: Maine GIS non-dissolved polygon boundary file (coastal detail preserved); dissolved version exists but is too featureless
-- The filter regex in `loadCounty()` controls which features appear as clickable towns — excludes unorganized territories, townships, plantations, patents, grants
-- Coastal counties (Knox, Lincoln, Hancock, Sagadahoc, Cumberland especially) have large file sizes due to coastal detail; Knox and Washington are the heaviest at ~6.5 MB and ~9.7 MB
-- Future work: water masking (diff dissolved vs. non-dissolved to create a water overlay layer), geometry simplification for large files, hard mode using unorganized territories (plan: tag with `HARD_MODE: true` property rather than filtering them out)
+- Source: Maine GIS non-dissolved polygon boundary file (coastal detail preserved)
+- `counties.geojson` — dissolved county outlines, used by `maine-quiz-counties.html`
+- Coastal counties have large file sizes due to coastal detail; Knox (~6.5 MB) and Washington (~9.7 MB) are the heaviest
+- Future work: geometry simplification for large files, water masking overlay
