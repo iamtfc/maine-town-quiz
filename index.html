@@ -323,7 +323,7 @@
   .stat-pct { font-family: 'Playfair Display', Georgia, serif; margin-left: 12px; white-space: nowrap; }
 
   #learn-prompt {
-    display: none;
+    visibility: hidden;
     text-align: center;
     margin-top: 14px;
   }
@@ -350,6 +350,7 @@
   <div id="picker-map"></div>
   <div id="county-label"></div>
   <div id="learn-prompt"><a href="maine-quiz-counties.html">Learn the counties first →</a></div>
+  <div style="text-align:center; margin-top:12px;"><a href="stats.html" style="color:#a0b4c8; font-size:0.95rem; text-decoration:none;">Your progress →</a></div>
 </div>
 
 <div id="mode-prompt">
@@ -390,7 +391,7 @@
   </div>
   <div class="results-btns" style="margin-top:16px;">
     <button id="challenge-btn" class="btn" style="display:none" onclick="goChallenge(currentCounty)">Try Challenge Mode</button>
-    <button class="btn visible" onclick="startQuiz()">Try Again</button>
+    <button id="try-again-btn" class="btn visible" onclick="startQuiz()">Try Again</button>
     <button class="btn visible btn-outline" onclick="showPicker()">Choose Another County</button>
   </div>
 </div>
@@ -491,7 +492,7 @@ function finalizeGame(county, pct) {
   const stats = loadStats();
   if (!stats.countyGames) stats.countyGames = {};
   if (!stats.countyGames[county]) stats.countyGames[county] = [];
-  stats.countyGames[county].push(currentGameAnswers.slice());
+  stats.countyGames[county].push({ ts: Date.now(), answers: currentGameAnswers.slice() });
   if (stats.countyGames[county].length > 5) stats.countyGames[county].shift();
   if (pct > (stats.countyBest[county] || 0)) stats.countyBest[county] = pct;
   if (pct === 100) {
@@ -506,14 +507,14 @@ function getTopBottom(stats, county, n = 5) {
   const games = (stats.countyGames || {})[county] || [];
   const townsMap = {};
   for (const game of games) {
-    for (const { town, correct } of game) {
+    for (const { town, correct } of (game.answers || game)) {
       if (!townsMap[town]) townsMap[town] = { seen: 0, correct: 0 };
       townsMap[town].seen++;
       if (correct) townsMap[town].correct++;
     }
   }
   const entries = Object.entries(townsMap)
-    .filter(([, s]) => s.seen >= 2)
+    .filter(([, s]) => s.seen >= 2 && Math.round(s.correct / s.seen * 100) < 100)
     .map(([town, s]) => ({ town, pct: Math.round(s.correct / s.seen * 100), seen: s.seen }))
     .sort((a, b) => a.pct - b.pct || b.seen - a.seen);
   return { bottom: entries.slice(0, n) };
@@ -524,15 +525,15 @@ let learnPromptTimer = null;
 
 function startLearnPromptTimer() {
   clearTimeout(learnPromptTimer);
-  document.getElementById('learn-prompt').style.display = 'none';
+  document.getElementById('learn-prompt').style.visibility = 'hidden';
   learnPromptTimer = setTimeout(() => {
-    document.getElementById('learn-prompt').style.display = 'block';
+    document.getElementById('learn-prompt').style.visibility = 'visible';
   }, 2000);
 }
 
 function cancelLearnPromptTimer() {
   clearTimeout(learnPromptTimer);
-  document.getElementById('learn-prompt').style.display = 'none';
+  document.getElementById('learn-prompt').style.visibility = 'hidden';
 }
 
 
@@ -784,11 +785,12 @@ function showResults() {
   document.getElementById('results-county').textContent = currentCounty + ' County Complete';
 
   const pct = Math.round((score / order.length) * 100);
-  const pctColor = p => p >= 67 ? 'var(--correct)' : p >= 34 ? 'var(--gold)' : '#e06b63';
+  const pctColor = p => { const t = p<=50 ? p/50 : (p-50)/50; return p<=50 ? `hsl(${Math.round(4+41*t)},${Math.round(67-14*t)}%,${Math.round(63-9*t)}%)` : `hsl(${Math.round(45+94*t)},${Math.round(53-14*t)}%,54%)`; };
   const scorePctEl = document.getElementById('score-pct');
   scorePctEl.textContent = pct + '%';
   scorePctEl.style.color = pctColor(pct);
   document.getElementById('score-detail').textContent = score + ' out of ' + order.length + ' towns correct';
+  document.getElementById('try-again-btn').style.display = pct === 100 ? 'none' : '';
 
   plausible('County Completed', { props: { county: currentCounty, score: pct + '%', mode: 'click' } });
 
@@ -801,7 +803,7 @@ function showResults() {
   const stats = loadStats();
   const best = stats.countyBest[currentCounty] || pct;
   const bestEl = document.getElementById('all-time-best');
-  bestEl.textContent = pct >= best ? 'New personal best!' : 'All-time best: ' + best + '%';
+  bestEl.innerHTML = pct >= best ? 'New personal best!' : 'All-time best: <span style="color:' + pctColor(best) + '">' + best + '%</span>';
   bestEl.style.color = pct >= best ? 'var(--correct)' : 'var(--parchment)';
   bestEl.style.fontSize = pct >= best ? '1.4rem' : '0.95rem';
   bestEl.style.fontFamily = pct >= best ? "'Playfair Display', Georgia, serif" : '';
@@ -814,7 +816,7 @@ function showResults() {
     statsEl.style.display = 'none';
   } else {
     statsEl.style.display = 'block';
-    const pctColor = p => p >= 67 ? '#6dbf7a' : p >= 34 ? '#c8a84b' : '#e06b63';
+    const pctColor = p => { const t = p<=50 ? p/50 : (p-50)/50; return p<=50 ? `hsl(${Math.round(4+41*t)},${Math.round(67-14*t)}%,${Math.round(63-9*t)}%)` : `hsl(${Math.round(45+94*t)},${Math.round(53-14*t)}%,54%)`; };
     const renderList = (items) => items.map(({ town, pct }) =>
       `<div class="stat-row" style="color:${pctColor(pct)}"><span>${town}</span><span class="stat-pct">${pct}%</span></div>`
     ).join('');

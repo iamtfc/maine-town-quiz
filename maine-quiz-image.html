@@ -277,6 +277,8 @@
   <h2 id="results-county">Complete</h2>
   <div class="score-big" id="score-pct">—</div>
   <div class="score-label" id="score-detail">—</div>
+  <div id="challenge-best" style="font-size:0.95rem; color:#a0b4c8; margin-top:4px;"></div>
+  <a href="stats.html" class="back-link">Your progress →</a>
   <div class="results-btns">
     <button class="btn visible" onclick="startQuiz()">Try Again</button>
     <button class="btn visible btn-outline" onclick="showPicker()">Choose Another County</button>
@@ -331,6 +333,31 @@ let riversFeatures = [], allRiversData = null;
 let allCountiesData = null;
 let order = [], current = 0, score = 0, answered = false, nextTimer = null;
 let currentCounty = '';
+let currentGameAnswers = [];
+
+const STATS_KEY = 'maineQuizStats';
+function loadStats() {
+  try { return JSON.parse(localStorage.getItem(STATS_KEY)) || { countyBest: {}, countyGames: {}, challengeBest: {}, challengeGames: {} }; }
+  catch(e) { return { countyBest: {}, countyGames: {}, challengeBest: {}, challengeGames: {} }; }
+}
+function saveStats(stats) {
+  try { localStorage.setItem(STATS_KEY, JSON.stringify(stats)); } catch(e) {}
+}
+function recordAnswer(town, correct) {
+  currentGameAnswers.push({ town, correct });
+}
+function finalizeGame(county, pct) {
+  const stats = loadStats();
+  if (!stats.challengeGames) stats.challengeGames = {};
+  if (!stats.challengeBest) stats.challengeBest = {};
+  if (!stats.challengeGames[county]) stats.challengeGames[county] = [];
+  stats.challengeGames[county].push({ ts: Date.now(), answers: currentGameAnswers.slice() });
+  if (stats.challengeGames[county].length > 5) stats.challengeGames[county].shift();
+  if (pct > (stats.challengeBest[county] || 0)) stats.challengeBest[county] = pct;
+  saveStats(stats);
+  currentGameAnswers = [];
+}
+function pctColor(p) { const t = p<=50 ? p/50 : (p-50)/50; return p<=50 ? `hsl(${Math.round(4+41*t)},${Math.round(67-14*t)}%,${Math.round(63-9*t)}%)` : `hsl(${Math.round(45+94*t)},${Math.round(53-14*t)}%,54%)`; }
 let svg, path;
 
 // Autocomplete state
@@ -555,6 +582,7 @@ function submitGuess(guess) {
     fb.textContent = '✓ Correct!';
     fb.className = 'correct';
     score++;
+    recordAnswer(target, true);
     nextTimer = setTimeout(nextQuestion, 1400);
   } else {
     // Mark the guessed town wrong if it matched a real town
@@ -570,6 +598,7 @@ function submitGuess(guess) {
       .classed('target', true);
     fb.textContent = '✗ ' + (guessedTown ? guessedTown + '. ' : '') + 'It\'s ' + target + '.';
     fb.className = 'wrong';
+    recordAnswer(target, false);
     document.getElementById('next-btn').classList.add('visible');
   }
 }
@@ -585,9 +614,21 @@ function showResults() {
   document.getElementById('results').style.display = 'flex';
   document.getElementById('results-county').textContent = currentCounty + ' County Complete';
   const pct = Math.round((score / order.length) * 100);
-  document.getElementById('score-pct').textContent = pct + '%';
+  const scorePctEl = document.getElementById('score-pct');
+  scorePctEl.textContent = pct + '%';
+  scorePctEl.style.color = pctColor(pct);
   document.getElementById('score-detail').textContent = score + ' out of ' + order.length + ' towns correct';
   plausible('County Completed', { props: { county: currentCounty, score: pct + '%', mode: isChallenge ? 'challenge' : 'name' } });
+
+  finalizeGame(currentCounty, pct);
+
+  const stats = loadStats();
+  const best = stats.challengeBest[currentCounty] || pct;
+  const bestEl = document.getElementById('challenge-best');
+  bestEl.innerHTML = pct >= best ? 'New personal best!' : 'All-time best: <span style="color:' + pctColor(best) + '">' + best + '%</span>';
+  bestEl.style.color = pct >= best ? 'var(--correct)' : 'var(--parchment)';
+  bestEl.style.fontSize = pct >= best ? '1.4rem' : '0.95rem';
+  bestEl.style.fontFamily = pct >= best ? "'Playfair Display', Georgia, serif" : '';
 }
 
 // ---------------------------------------------------------------------------

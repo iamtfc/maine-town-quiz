@@ -337,7 +337,7 @@ function showResults() {
   document.getElementById('quiz-ui').style.display = 'none';
   document.getElementById('results').style.display = 'flex';
   const pct = Math.round((score / order.length) * 100);
-  const pctColor = p => p >= 67 ? 'var(--correct)' : p >= 34 ? 'var(--gold)' : '#e06b63';
+  const pctColor = p => { const t = p<=50 ? p/50 : (p-50)/50; return p<=50 ? `hsl(${Math.round(4+41*t)},${Math.round(67-14*t)}%,${Math.round(63-9*t)}%)` : `hsl(${Math.round(45+94*t)},${Math.round(53-14*t)}%,54%)`; };
   const scorePctEl = document.getElementById('score-pct');
   scorePctEl.textContent = pct + '%';
   scorePctEl.style.color = pctColor(pct);
