@@ -528,6 +528,7 @@ async function showCounty(county) {
 
   document.getElementById('main-view').style.display = 'none';
   document.getElementById('county-view').style.display = 'flex';
+  document.querySelector('#county-view a.btn-outline').href = `index.html?county=${encodeURIComponent(county)}`;
   window.scrollTo(0, 0);
 
   const stats = loadStats();

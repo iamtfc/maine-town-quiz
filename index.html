@@ -345,7 +345,6 @@
 
 <div id="county-picker">
   <h1>Maine Town Quiz</h1>
-  <p class="subtitle">Can you find it on the map?</p>
   <h2>Choose a county</h2>
   <div id="picker-map"></div>
   <div id="county-label"></div>
@@ -863,6 +862,13 @@ async function buildPickerMap() {
 
 buildPickerMap();
 startLearnPromptTimer();
+
+const urlCounty = new URLSearchParams(window.location.search).get('county');
+if (urlCounty) {
+  const match = urlCounty.trim();
+  if (isChallengeUnlocked(match)) showModePrompt(match);
+  else loadCounty(match);
+}
 </script>
 </body>
 </html>
