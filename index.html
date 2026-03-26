@@ -528,18 +528,12 @@ function getTopBottom(stats, county, n = 5) {
 }
 
 let pendingCounty = '';
-let learnPromptTimer = null;
 
 function startLearnPromptTimer() {
-  clearTimeout(learnPromptTimer);
-  document.getElementById('learn-prompt').style.visibility = 'hidden';
-  learnPromptTimer = setTimeout(() => {
-    document.getElementById('learn-prompt').style.visibility = 'visible';
-  }, 2000);
+  document.getElementById('learn-prompt').style.visibility = 'visible';
 }
 
 function cancelLearnPromptTimer() {
-  clearTimeout(learnPromptTimer);
   document.getElementById('learn-prompt').style.visibility = 'hidden';
 }
 
