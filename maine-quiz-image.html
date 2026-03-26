@@ -270,7 +270,7 @@
   </div>
 
   <button id="next-btn" class="btn" onclick="nextQuestion()">Next →</button>
-  <button id="picker-btn" class="btn visible btn-outline" style="margin-top:16px; margin-bottom:24px;" onclick="showPicker()">← Choose Another County</button>
+  <button id="picker-btn" class="btn visible btn-outline" style="margin-top:16px; margin-bottom:24px;" onclick="showPicker()">← Switch County</button>
 </div>
 
 <div id="results">
@@ -280,8 +280,10 @@
   <div id="challenge-best" style="font-size:0.95rem; color:#a0b4c8; margin-top:4px;"></div>
   <a href="stats.html" class="back-link">Your progress →</a>
   <div class="results-btns">
-    <button class="btn visible" onclick="startQuiz()">Try Again</button>
-    <button class="btn visible btn-outline" onclick="showPicker()">Choose Another County</button>
+    <div style="display:flex; flex-direction:row; gap:10px; justify-content:center;">
+      <button class="btn visible" onclick="startQuiz()">Try Again</button>
+      <button class="btn visible btn-outline" onclick="showPicker()">Switch County</button>
+    </div>
   </div>
 </div>
 
@@ -350,9 +352,11 @@ function finalizeGame(county, pct) {
   const stats = loadStats();
   if (!stats.challengeGames) stats.challengeGames = {};
   if (!stats.challengeBest) stats.challengeBest = {};
+  if (!stats.challengeGameCount) stats.challengeGameCount = {};
   if (!stats.challengeGames[county]) stats.challengeGames[county] = [];
   stats.challengeGames[county].push({ ts: Date.now(), answers: currentGameAnswers.slice() });
-  if (stats.challengeGames[county].length > 5) stats.challengeGames[county].shift();
+  if (stats.challengeGames[county].length > 10) stats.challengeGames[county].shift();
+  stats.challengeGameCount[county] = (stats.challengeGameCount[county] || 0) + 1;
   if (pct > (stats.challengeBest[county] || 0)) stats.challengeBest[county] = pct;
   saveStats(stats);
   currentGameAnswers = [];
@@ -612,6 +616,7 @@ function nextQuestion() {
 function showResults() {
   document.getElementById('quiz-ui').style.display = 'none';
   document.getElementById('results').style.display = 'flex';
+  window.scrollTo(0, 0);
   document.getElementById('results-county').textContent = currentCounty + ' County Complete';
   const pct = Math.round((score / order.length) * 100);
   const scorePctEl = document.getElementById('score-pct');

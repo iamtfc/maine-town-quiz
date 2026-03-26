@@ -356,8 +356,10 @@
 <div id="mode-prompt">
   <h2 id="mode-prompt-county"></h2>
   <p>You've unlocked Challenge Mode for this county</p>
-  <button class="btn visible" onclick="loadCounty(pendingCounty)">Normal Mode</button>
-  <button class="btn visible" onclick="goChallenge(pendingCounty)">Challenge Mode</button>
+  <div style="display:flex; flex-direction:row; gap:10px;">
+    <button class="btn visible" onclick="loadCounty(pendingCounty)">Normal Mode</button>
+    <button class="btn visible" onclick="goChallenge(pendingCounty)">Challenge Mode</button>
+  </div>
   <a class="back-link" onclick="showPicker()">← Back to counties</a>
 </div>
 
@@ -375,7 +377,7 @@
     <div id="progress-bar-track"></div>
   </div>
   <button id="next-btn" class="btn" onclick="nextQuestion()">Next →</button>
-  <button id="picker-btn" class="btn visible btn-outline" onclick="showPicker()">← Choose Another County</button>
+  <button id="picker-btn" class="btn visible btn-outline" onclick="showPicker()">← Switch County</button>
 </div>
 
 <div id="results">
@@ -391,9 +393,11 @@
     </div>
   </div>
   <div class="results-btns" style="margin-top:16px;">
+    <div style="display:flex; flex-direction:row; gap:10px; justify-content:center;">
+      <button id="try-again-btn" class="btn visible" onclick="startQuiz()">Try Again</button>
+      <button class="btn visible btn-outline" onclick="showPicker()">Switch County</button>
+    </div>
     <button id="challenge-btn" class="btn" style="display:none" onclick="goChallenge(currentCounty)">Try Challenge Mode</button>
-    <button id="try-again-btn" class="btn visible" onclick="startQuiz()">Try Again</button>
-    <button class="btn visible btn-outline" onclick="showPicker()">Choose Another County</button>
   </div>
 </div>
 
@@ -492,9 +496,11 @@ function recordAnswer(town, correct) {
 function finalizeGame(county, pct) {
   const stats = loadStats();
   if (!stats.countyGames) stats.countyGames = {};
+  if (!stats.countyGameCount) stats.countyGameCount = {};
   if (!stats.countyGames[county]) stats.countyGames[county] = [];
   stats.countyGames[county].push({ ts: Date.now(), answers: currentGameAnswers.slice() });
-  if (stats.countyGames[county].length > 5) stats.countyGames[county].shift();
+  if (stats.countyGames[county].length > 10) stats.countyGames[county].shift();
+  stats.countyGameCount[county] = (stats.countyGameCount[county] || 0) + 1;
   if (pct > (stats.countyBest[county] || 0)) stats.countyBest[county] = pct;
   if (pct === 100) {
     if (!stats.unlockedCounties) stats.unlockedCounties = [];
@@ -783,6 +789,7 @@ function nextQuestion() {
 function showResults() {
   document.getElementById('quiz-ui').style.display = 'none';
   document.getElementById('results').style.display = 'flex';
+  window.scrollTo(0, 0);
   document.getElementById('results-county').textContent = currentCounty + ' County Complete';
 
   const pct = Math.round((score / order.length) * 100);

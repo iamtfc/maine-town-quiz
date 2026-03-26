@@ -370,7 +370,7 @@
   <div id="cv-chart"></div>
   <div id="cv-missed"></div>
 
-  <div style="display:flex; flex-direction:column; align-items:center; gap:10px; margin-top:16px; width:100%;">
+  <div style="display:flex; flex-direction:row; justify-content:center; gap:10px; margin-top:16px; width:100%;">
     <button class="btn" onclick="showMain()">All Counties</button>
     <a href="index.html" class="btn btn-outline">Go to Quiz</a>
   </div>
@@ -442,7 +442,12 @@ function shouldInclude(f) {
 // ── Summary strip ──────────────────────────────────────
 function buildSummary(stats) {
   const played = Object.keys(stats.countyBest).length;
-  const totalGames = Object.values(stats.countyGames || {}).reduce((s, g) => s + g.length, 0);
+  const countyGameCount = stats.countyGameCount || {};
+  const challengeGameCount = stats.challengeGameCount || {};
+  const totalGames = Object.keys(stats.countyBest || {}).reduce((s, c) =>
+      s + (countyGameCount[c] || (stats.countyGames[c] || []).length), 0)
+    + Object.keys(stats.challengeBest || {}).reduce((s, c) =>
+      s + (challengeGameCount[c] || ((stats.challengeGames || {})[c] || []).length), 0);
   const perfected = (stats.unlockedCounties || []).length;
 
   let totalSeen = 0, totalCorrect = 0;
@@ -482,11 +487,11 @@ function buildCountyGrid(stats) {
   const unlocked = new Set(stats.unlockedCounties || []);
   document.getElementById('county-grid').innerHTML = COUNTIES.map(county => {
     const best = stats.countyBest[county];
-    const gameCount = (stats.countyGames[county] || []).length;
+    const gameCount = (stats.countyGameCount || {})[county] || (stats.countyGames[county] || []).length;
     const played = best !== undefined;
     const badge = unlocked.has(county) ? '<span class="unlock-badge" title="Challenge mode unlocked">⭐</span>' : '';
     const scoreStyle = played ? `color:${pctColor(best)}` : '';
-    const gamesLabel = !played ? 'Not yet played' : gameCount === 1 ? '1 game' : gameCount > 1 ? `${gameCount} games` : '';
+    const gamesLabel = !played ? 'Not yet played' : gameCount === 1 ? '1 game' : `${gameCount} games`;
     return `
       <div class="county-card${played ? '' : ' unplayed'}" ${played ? `onclick="showCounty('${county}')"` : ''}>
         ${badge}
@@ -541,6 +546,9 @@ async function renderCountyDetail(county) {
   const stats = loadStats();
   const isChallenge = currentMode === 'challenge';
   const best = isChallenge ? (stats.challengeBest || {})[county] : stats.countyBest[county];
+  const gameCount = isChallenge
+    ? ((stats.challengeGameCount || {})[county] || ((stats.challengeGames || {})[county] || []).length)
+    : ((stats.countyGameCount || {})[county] || (stats.countyGames[county] || []).length);
   const games = isChallenge
     ? ((stats.challengeGames || {})[county] || [])
     : (stats.countyGames[county] || []);
@@ -561,7 +569,7 @@ async function renderCountyDetail(county) {
       <div class="lbl">Best Score</div>
     </div>
     <div class="summary-stat">
-      <div class="val">${games.length || '—'}</div>
+      <div class="val">${gameCount || '—'}</div>
       <div class="lbl">${games.length === 1 ? 'Game' : 'Games'} Played</div>
     </div>
     <div class="summary-stat">
