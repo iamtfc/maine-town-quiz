@@ -278,7 +278,6 @@
   <div class="score-big" id="score-pct">—</div>
   <div class="score-label" id="score-detail">—</div>
   <div id="challenge-best" style="font-size:0.95rem; color:#a0b4c8; margin-top:4px;"></div>
-  <a href="stats.html" class="back-link">Your progress →</a>
   <div class="results-btns">
     <div style="display:flex; flex-direction:row; gap:10px; justify-content:center;">
       <button class="btn visible" onclick="startQuiz()">Try Again</button>
@@ -765,5 +764,13 @@ buildPickerMap().then(() => {
 });
 loadAllTowns();
 </script>
+<style>.site-footer a:hover { color: var(--gold); }</style>
+<footer class="site-footer" style="margin-top: auto; padding: 28px 0 16px; text-align: center; width: 100%;">
+  <nav style="display: flex; justify-content: center; gap: 20px;">
+    <a href="about.html" style="font-family: 'Crimson Pro', Georgia, serif; font-size: 0.9rem; color: var(--parchment); text-decoration: none;">About</a>
+    <a href="stats.html" style="font-family: 'Crimson Pro', Georgia, serif; font-size: 0.9rem; color: var(--parchment); text-decoration: none;">Progress</a>
+    <a href="https://github.com/iamtfc/maine-town-quiz/issues/new" target="_blank" rel="noopener" style="font-family: 'Crimson Pro', Georgia, serif; font-size: 0.9rem; color: var(--parchment); text-decoration: none;">Report a Bug</a>
+  </nav>
+</footer>
 </body>
 </html>

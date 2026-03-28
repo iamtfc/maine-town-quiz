@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>About — Maine Town Quiz</title>
+<script async src="https://plausible.io/js/pa-DKzRWAziU2jErmALNhWWs.js"></script>
+<script>window.plausible=window.plausible||function(){(plausible.q=plausible.q||[]).push(arguments)},plausible.init=plausible.init||function(i){plausible.o=i||{}};plausible.init()</script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Crimson+Pro:ital,wght@0,400;0,600;1,400&display=swap');
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --ocean: #1a3a5c;
+    --deep: #0d2237;
+    --parchment: #f5efe0;
+    --gold: #c8a84b;
+  }
+
+  body {
+    font-family: 'Crimson Pro', Georgia, serif;
+    background: var(--deep);
+    color: var(--parchment);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 16px;
+  }
+
+  h1 {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: clamp(1.6rem, 5vw, 2.4rem);
+    color: var(--gold);
+    text-align: center;
+    margin-bottom: 4px;
+    letter-spacing: 0.02em;
+  }
+
+  .subtitle {
+    font-style: italic;
+    color: #a0b4c8;
+    font-size: 0.95rem;
+    margin-bottom: 28px;
+    text-align: center;
+  }
+
+  .content {
+    width: 100%;
+    max-width: 520px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .section-title {
+    font-family: 'Playfair Display', Georgia, serif;
+    color: var(--gold);
+    font-size: 1.2rem;
+    font-weight: 400;
+    margin-bottom: 12px;
+    text-align: left;
+    width: 100%;
+  }
+
+  .faq-item {
+    background: var(--ocean);
+    border: 2px solid #2a4a6c;
+    border-radius: 8px;
+    padding: 16px 20px;
+    width: 100%;
+    margin-bottom: 10px;
+  }
+
+  .faq-q {
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: 1rem;
+    color: var(--parchment);
+    margin-bottom: 8px;
+  }
+
+  .faq-a {
+    font-size: 1rem;
+    color: #a0b4c8;
+    line-height: 1.7;
+  }
+
+  .faq-a a {
+    color: #a0b4c8;
+    text-decoration: underline;
+  }
+
+  .faq-a a:hover { color: var(--gold); }
+
+  .site-footer a:hover { color: var(--gold); }
+</style>
+</head>
+<body>
+
+<h1>Maine Town Quiz</h1>
+<p class="subtitle">About this project</p>
+
+<div class="content">
+
+  <div class="section-title">FAQ</div>
+
+  <div class="faq-item">
+    <div class="faq-q">Why did you make this?</div>
+    <div class="faq-a">I've wanted to learn all the towns in Maine for a long time and couldn't find a good way to do it. So I built one with <a href="https://claude.ai/code" target="_blank" rel="noopener">Claude Code</a>.</div>
+  </div>
+
+  <div class="faq-item">
+    <div class="faq-q">What towns are included? Why are some missing?</div>
+    <div class="faq-a">The quiz includes all incorporated towns and cities. Unorganized territories, townships, plantations, patents, and grants were outside the original scope of the quiz. I've included all the <a href="https://en.wikipedia.org/wiki/Gore_(geography)" target="_blank" rel="noopener">Gores</a> because I find the concept charming.</div>
+  </div>
+
+  <div class="faq-item">
+    <div class="faq-q">Where does the map data come from?</div>
+    <div class="faq-a">Town boundaries come from the <a href="https://www.maine.gov/geolib/" target="_blank" rel="noopener">Maine Office of GIS</a>, which maintains authoritative boundary files for the state. I'm grateful for their work making this data publicly available.</div>
+  </div>
+
+  <div class="faq-item">
+    <div class="faq-q">Does my progress get saved?</div>
+    <div class="faq-a">Yes. All scores and game history are saved in your browser's local storage. Progress is stored per device and per browser. Clearing your browser data will reset it.</div>
+  </div>
+
+  <div class="faq-item">
+    <div class="faq-q">How do I unlock Challenge Mode?</div>
+    <div class="faq-a">Score 100% on any county in Normal Mode. Once unlocked, you'll be offered a choice of Normal or Challenge Mode each time you select that county.</div>
+  </div>
+
+  <div class="faq-item">
+    <div class="faq-q">Will you add other states?</div>
+    <div class="faq-a">No, this quiz is specifically about Maine. But the code is open source and available on <a href="https://github.com/iamtfc/maine-town-quiz" target="_blank" rel="noopener">GitHub</a> under a CC BY-NC license, so you're welcome to adapt it for any state you love.</div>
+  </div>
+
+  <div style="text-align:center; margin-top:28px;">
+    <script type="text/javascript" src="https://cdnjs.buymeacoffee.com/1.0.0/button.prod.min.js" data-name="bmc-button" data-slug="iamtfc" data-color="#FFDD00" data-emoji="" data-font="Cookie" data-text="Buy me a coffee" data-outline-color="#000000" data-font-color="#000000" data-coffee-color="#ffffff"></script>
+  </div>
+
+</div>
+
+<style>
+  .site-footer a:hover { color: var(--gold); }
+</style>
+<footer class="site-footer" style="margin-top: auto; padding: 28px 0 16px; text-align: center; width: 100%;">
+  <nav style="display: flex; justify-content: center; gap: 20px;">
+    <a href="about.html" style="font-family: 'Crimson Pro', Georgia, serif; font-size: 0.9rem; color: var(--parchment); text-decoration: none;">About</a>
+    <a href="stats.html" style="font-family: 'Crimson Pro', Georgia, serif; font-size: 0.9rem; color: var(--parchment); text-decoration: none;">Progress</a>
+    <a href="https://github.com/iamtfc/maine-town-quiz/issues/new" target="_blank" rel="noopener" style="font-family: 'Crimson Pro', Georgia, serif; font-size: 0.9rem; color: var(--parchment); text-decoration: none;">Report a Bug</a>
+  </nav>
+</footer>
+
+</body>
+</html>

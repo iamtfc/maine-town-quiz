@@ -349,7 +349,6 @@
   <div id="picker-map"></div>
   <div id="county-label"></div>
   <div id="learn-prompt"><a href="maine-quiz-counties.html">Learn the counties first →</a></div>
-  <div style="text-align:center; margin-top:12px;"><a href="stats.html" style="color:#a0b4c8; font-size:0.95rem; text-decoration:none;">Your progress →</a></div>
 </div>
 
 <div id="mode-prompt">
@@ -359,7 +358,7 @@
     <button class="btn visible" onclick="loadCounty(pendingCounty)">Normal Mode</button>
     <button class="btn visible" onclick="goChallenge(pendingCounty)">Challenge Mode</button>
   </div>
-  <a class="back-link" onclick="showPicker()">← Back to counties</a>
+  <button class="btn btn-outline visible" onclick="showPicker()">Back to Counties</button>
 </div>
 
 <div id="loading">Loading map data…</div>
@@ -384,7 +383,6 @@
   <div class="score-big" id="score-pct">—</div>
   <div class="score-label" id="score-detail">—</div>
   <div id="all-time-best" style="font-size:0.95rem; color:#a0b4c8; margin-top:4px;"></div>
-  <a href="stats.html" style="color:#a0b4c8; font-size:0.95rem; text-decoration:none; margin-top:4px;">Your progress →</a>
   <div id="town-stats" style="display:none; width:100%; margin-top:16px;">
     <div style="width:260px; margin:0 auto;">
       <div style="color:var(--parchment); font-size:1.3rem; margin-bottom:8px;">Most Missed</div>
@@ -870,5 +868,13 @@ if (urlCounty) {
   else loadCounty(match);
 }
 </script>
+<style>.site-footer a:hover { color: var(--gold); }</style>
+<footer class="site-footer" style="margin-top: auto; padding: 28px 0 16px; text-align: center; width: 100%;">
+  <nav style="display: flex; justify-content: center; gap: 20px;">
+    <a href="about.html" style="font-family: 'Crimson Pro', Georgia, serif; font-size: 0.9rem; color: var(--parchment); text-decoration: none;">About</a>
+    <a href="stats.html" style="font-family: 'Crimson Pro', Georgia, serif; font-size: 0.9rem; color: var(--parchment); text-decoration: none;">Progress</a>
+    <a href="https://github.com/iamtfc/maine-town-quiz/issues/new" target="_blank" rel="noopener" style="font-family: 'Crimson Pro', Georgia, serif; font-size: 0.9rem; color: var(--parchment); text-decoration: none;">Report a Bug</a>
+  </nav>
+</footer>
 </body>
 </html>
