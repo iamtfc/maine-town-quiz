@@ -86,7 +86,7 @@ Display: something like "You know X of Y Maine towns" with a percentage or progr
 Implementation notes:
 - `townStats[town]` already tracks `{ seen, correct }` — use this for the 75% threshold
 - `countyBest[county] === 100` indicates a perfected county — all its towns count as known
-- Need total eligible town count as denominator; derive from GeoJSON files or hardcode per county
+- Denominator is all quiz-eligible towns (those passing `shouldInclude()`), excluding Gores — knowing a Gore feels like a bonus, not a requirement
 - The two rules should be OR'd — a town counts if either condition is met
 
 ## Planned: Curated Challenges
