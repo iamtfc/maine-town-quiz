@@ -75,6 +75,20 @@ Game records: `{ ts: Date.now(), answers: [{ town, correct }] }`. Old records (f
 - Coastal counties have large file sizes due to coastal detail; Knox (~6.5 MB) and Washington (~9.7 MB) are the heaviest
 - Future work: geometry simplification for large files, water masking overlay
 
+## Planned: Maine Town Knowledge Tracker
+
+A stat on `stats.html` showing overall progress toward knowing all Maine towns. Definition of "knowing" a town:
+- You've answered it correctly 75% or more of the time across all attempts, OR
+- You've scored 100% on its county (bulk-counts all towns in that county as known)
+
+Display: something like "You know X of Y Maine towns" with a percentage or progress bar.
+
+Implementation notes:
+- `townStats[town]` already tracks `{ seen, correct }` — use this for the 75% threshold
+- `countyBest[county] === 100` indicates a perfected county — all its towns count as known
+- Need total eligible town count as denominator; derive from GeoJSON files or hardcode per county
+- The two rules should be OR'd — a town counts if either condition is met
+
 ## Planned: Curated Challenges
 
 A future `challenges.html` page where players can browse and attempt themed challenges — e.g. "Find all towns with 'Port' in the name", "Match towns with their New England namesakes (Portland / New Portland)", "Towns named after foreign countries".
