@@ -341,7 +341,22 @@
   <h1>Your Progress</h1>
   <p class="subtitle">Maine Town Quiz</p>
 
+  <div class="mode-toggle" id="main-toggle" style="display:none;">
+    <button id="main-toggle-normal" class="toggle-btn active" onclick="setMainMode('normal')">Normal</button>
+    <button id="main-toggle-challenge" class="toggle-btn" onclick="setMainMode('challenge')">Challenge</button>
+  </div>
+
   <div class="summary" id="summary"></div>
+
+  <div id="town-tracker" style="width:100%; max-width:520px; margin-bottom:24px; display:none;">
+    <div class="section-title" style="margin-bottom:8px;">Towns</div>
+    <div style="text-align:center; margin-bottom:8px;">
+      <span id="tracker-label" style="font-size:1rem; color:var(--parchment);">0 of 460 Maine towns</span>
+    </div>
+    <div style="width:100%; height:10px; background:var(--ocean); border-radius:5px; overflow:hidden; border:1px solid #2a4a6c;">
+      <div id="tracker-bar" style="height:100%; width:0%; background:var(--correct); border-radius:5px; transition:width 0.4s;"></div>
+    </div>
+  </div>
 
   <div class="section-title">Counties</div>
   <div class="county-grid" id="county-grid"></div>
@@ -439,19 +454,82 @@ function shouldInclude(f) {
   return true;
 }
 
+// ── County → towns map (generated from GeoJSON via shouldInclude; Gores included) ──
+const COUNTY_TOWNS = {
+  'Androscoggin': ['Auburn','Durham','Greene','Leeds','Lewiston','Lisbon','Livermore','Livermore Falls','Mechanic Falls','Minot','Poland','Sabattus','Turner','Wales'],
+  'Aroostook': ['Allagash','Amity','Ashland','Blaine','Bridgewater','Caribou','Castle Hill','Caswell','Chapman','Crystal','Dyer Brook','Eagle Lake','Easton','Fort Fairfield','Fort Kent','Frenchville','Grand Isle','Hamlin','Hammond','Haynesville','Hersey','Hodgdon','Houlton','Island Falls','Limestone','Linneus','Littleton','Ludlow','Madawaska','Mapleton','Mars Hill','Masardis','Merrill','Monticello','New Canada','New Limerick','New Sweden','Oakfield','Orient','Perham','Portage Lake','Presque Isle','Saint Agatha','Saint Francis','Sherman','Smyrna','Stockholm','Van Buren','Wade','Wallagrass','Washburn','Westfield','Westmanland','Weston','Woodland'],
+  'Cumberland': ['Baldwin','Bridgton','Brunswick','Cape Elizabeth','Casco','Chebeague Island','Cumberland','Falmouth','Freeport','Frye Island','Gorham','Gray','Harpswell','Harrison','Long Island','Naples','New Gloucester','North Yarmouth','Portland','Pownal','Raymond','Scarborough','Sebago','South Portland','Standish','Westbrook','Windham','Yarmouth'],
+  'Franklin': ['Avon','Carrabassett Valley','Carthage','Chesterville','Coburn Gore','Eustis','Farmington','Gorham Gore','Industry','Jay','Kingfield','Massachusetts Gore','New Sharon','New Vineyard','Phillips','Rangeley','Rangeley Plt','Strong','Temple','Weld','Wilton'],
+  'Hancock': ['Amherst','Aurora','Bar Harbor','Blue Hill','Brooklin','Brooksville','Bucksport','Castine','Cranberry Isles','Dedham','Deer Isle','Eastbrook','Ellsworth','Franklin','Frenchboro','Gouldsboro','Great Pond','Hancock','Lamoine','Mariaville','Mount Desert','Orland','Osborn','Otis','Penobscot','Sedgwick','Sorrento','Southwest Harbor','Stonington','Sullivan','Surry','Swans Island','Tremont','Trenton','Verona Island','Waltham','Winter Harbor'],
+  'Kennebec': ['Albion','Augusta','Belgrade','Benton','Chelsea','China','Clinton','Farmingdale','Fayette','Gardiner','Hallowell','Litchfield','Manchester','Monmouth','Mount Vernon','Oakland','Pittston','Randolph','Readfield','Rome','Sidney','Vassalboro','Vienna','Waterville','Wayne','West Gardiner','Windsor','Winslow','Winthrop'],
+  'Knox': ['Appleton','Camden','Cushing','Friendship','Hope','Isle au Haut','Matinicus Isle Plt','North Haven','Owls Head','Rockland','Rockport','Saint George','South Thomaston','Thomaston','Union','Vinalhaven','Warren','Washington'],
+  'Lincoln': ['Alna','Boothbay','Boothbay Harbor','Bremen','Bristol','Damariscotta','Dresden','Edgecomb','Hibberts Gore','Jefferson','Monhegan Island Plt','Newcastle','Nobleboro','Somerville','South Bristol','Southport','Waldoboro','Westport Island','Whitefield','Wiscasset'],
+  'Oxford': ['Andover','Bethel','Brownfield','Buckfield','Byron','Canton','Denmark','Dixfield','Fryeburg','Gilead','Greenwood','Hanover','Hartford','Hebron','Hiram','Lovell','Mexico','Newry','Norway','Otisfield','Oxford','Paris','Peru','Porter','Roxbury','Rumford','Stoneham','Stow','Sumner','Sweden','Upton','Waterford','West Paris','Woodstock'],
+  'Penobscot': ['Alton','Bangor','Bradford','Bradley','Brewer','Burlington','Carmel','Charleston','Chester','Clifton','Corinna','Corinth','Dexter','Dixmont','East Millinocket','Eddington','Edinburg','Enfield','Etna','Exeter','Garland','Glenburn','Greenbush','Hampden','Hermon','Holden','Howland','Hudson','Indian Island','Kenduskeag','Lagrange','Lakeville','Lee','Levant','Lincoln','Lowell','Mattawamkeag','Maxfield','Medway','Milford','Millinocket','Mount Chase','Newburgh','Newport','Old Town','Orono','Orrington','Passadumkeag','Patten','Plymouth','Springfield','Stacyville','Stetson','Veazie','Veazie Gore','Winn','Woodville'],
+  'Piscataquis': ['Abbot','Beaver Cove','Bowerbank','Brownville','Dover-Foxcroft','Greenville','Guilford','Medford','Milo','Monson','Parkman','Sangerville','Sebec','Shirley','Wellington','Willimantic'],
+  'Sagadahoc': ['Arrowsic','Bath','Bowdoin','Bowdoinham','Georgetown','Phippsburg','Richmond','Topsham','West Bath','Woolwich'],
+  'Somerset': ['Anson','Athens','Bingham','Blake Gore','Cambridge','Canaan','Caratunk','Cornville','Detroit','Embden','Fairfield','Harmony','Hartland','Jackman','Madison','Mercer','Moose River','Moscow','Moxie Gore','New Portland','Norridgewock','Palmyra','Pittsfield','Ripley','Saint Albans','Skowhegan','Smithfield','Solon','Starks','The Forks Plt'],
+  'Waldo': ['Belfast','Belmont','Brooks','Burnham','Frankfort','Freedom','Islesboro','Jackson','Knox','Liberty','Lincolnville','Monroe','Montville','Morrill','Northport','Palermo','Prospect','Searsmont','Searsport','Stockton Springs','Swanville','Thorndike','Troy','Unity','Waldo','Winterport'],
+  'Washington': ['Addison','Alexander','Baileyville','Beals','Beddington','Calais','Charlotte','Cherryfield','Columbia','Columbia Falls','Cooper','Crawford','Cutler','Danforth','Deblois','Dennysville','East Machias','Eastport','Grand Lake Stream Plt','Harrington','Jonesboro','Jonesport','Lubec','Machias','Machiasport','Marshfield','Meddybemps','Milbridge','Northfield','Pembroke','Perry','Pleasant Point','Princeton','Robbinston','Roque Bluffs','Steuben','Talmadge','Topsfield','Vanceboro','Waite','Wesley','Whiting','Whitneyville'],
+  'York': ['Acton','Alfred','Arundel','Berwick','Biddeford','Buxton','Cornish','Dayton','Eliot','Hollis','Kennebunk','Kennebunkport','Kittery','Lebanon','Limerick','Limington','Lyman','Newfield','North Berwick','Ogunquit','Old Orchard Beach','Parsonsfield','Saco','Sanford','Shapleigh','South Berwick','Waterboro','Wells','York'],
+};
+
+// Total quiz-eligible towns excluding Gores (460)
+const KNOWN_TOWNS_TOTAL = 460;
+
+// Count towns a player "knows" in a given mode.
+// A town counts if: ≥75% accuracy across all plays, OR its county was perfected.
+// Gores are excluded from both numerator and denominator.
+function countKnownTowns(stats, mode) {
+  const gamesMap = mode === 'challenge' ? (stats.challengeGames || {}) : (stats.countyGames || {});
+  const perfectedCounties = mode === 'challenge'
+    ? (stats.challengeUnlockedCounties || [])
+    : (stats.unlockedCounties || []);
+
+  // Build town accuracy from stored game records (last 10 per county)
+  const townAccuracy = {};
+  for (const games of Object.values(gamesMap)) {
+    for (const game of games) {
+      for (const { town, correct } of gameAnswers(game)) {
+        if (!townAccuracy[town]) townAccuracy[town] = { seen: 0, correct: 0 };
+        townAccuracy[town].seen++;
+        if (correct) townAccuracy[town].correct++;
+      }
+    }
+  }
+
+  const known = new Set();
+
+  for (const [town, s] of Object.entries(townAccuracy)) {
+    if (/gore$/i.test(town)) continue;
+    if (s.seen > 0 && Math.round(s.correct / s.seen * 100) >= 75) known.add(town);
+  }
+
+  for (const county of perfectedCounties) {
+    for (const town of (COUNTY_TOWNS[county] || [])) {
+      if (!/gore$/i.test(town)) known.add(town);
+    }
+  }
+
+  return known.size;
+}
+
 // ── Summary strip ──────────────────────────────────────
-function buildSummary(stats) {
-  const played = Object.keys(stats.countyBest).length;
-  const countyGameCount = stats.countyGameCount || {};
-  const challengeGameCount = stats.challengeGameCount || {};
-  const totalGames = Object.keys(stats.countyBest || {}).reduce((s, c) =>
-      s + (countyGameCount[c] || (stats.countyGames[c] || []).length), 0)
-    + Object.keys(stats.challengeBest || {}).reduce((s, c) =>
-      s + (challengeGameCount[c] || ((stats.challengeGames || {})[c] || []).length), 0);
-  const perfected = (stats.unlockedCounties || []).length;
+function buildSummary(stats, mode) {
+  const isChallenge = mode === 'challenge';
+  const bestMap = isChallenge ? (stats.challengeBest || {}) : (stats.countyBest || {});
+  const gamesMap = isChallenge ? (stats.challengeGames || {}) : (stats.countyGames || {});
+  const gameCountMap = isChallenge ? (stats.challengeGameCount || {}) : (stats.countyGameCount || {});
+
+  const played = Object.keys(bestMap).length;
+  const totalGames = Object.keys(bestMap).reduce((s, c) =>
+    s + (gameCountMap[c] || (gamesMap[c] || []).length), 0);
+  const perfected = isChallenge
+    ? Object.keys(bestMap).filter(c => bestMap[c] === 100).length
+    : (stats.unlockedCounties || []).length;
 
   let totalSeen = 0, totalCorrect = 0;
-  for (const games of Object.values(stats.countyGames || {})) {
+  for (const games of Object.values(gamesMap)) {
     for (const game of games) {
       for (const { correct } of gameAnswers(game)) {
         totalSeen++;
@@ -483,13 +561,17 @@ function buildSummary(stats) {
 }
 
 // ── County grid ────────────────────────────────────────
-function buildCountyGrid(stats) {
+function buildCountyGrid(stats, mode) {
+  const isChallenge = mode === 'challenge';
+  const bestMap = isChallenge ? (stats.challengeBest || {}) : (stats.countyBest || {});
+  const gamesMap = isChallenge ? (stats.challengeGames || {}) : (stats.countyGames || {});
+  const gameCountMap = isChallenge ? (stats.challengeGameCount || {}) : (stats.countyGameCount || {});
   const unlocked = new Set(stats.unlockedCounties || []);
   document.getElementById('county-grid').innerHTML = COUNTIES.map(county => {
-    const best = stats.countyBest[county];
-    const gameCount = (stats.countyGameCount || {})[county] || (stats.countyGames[county] || []).length;
+    const best = bestMap[county];
+    const gameCount = (gameCountMap[county]) || (gamesMap[county] || []).length;
     const played = best !== undefined;
-    const badge = unlocked.has(county) ? '<span class="unlock-badge" title="Challenge mode unlocked">⭐</span>' : '';
+    const badge = !isChallenge && unlocked.has(county) ? '<span class="unlock-badge" title="Challenge mode unlocked">⭐</span>' : '';
     const scoreStyle = played ? `color:${pctColor(best)}` : '';
     const gamesLabel = !played ? 'Not yet played' : gameCount === 1 ? '1 game' : `${gameCount} games`;
     return `
@@ -505,7 +587,32 @@ function buildCountyGrid(stats) {
 
 // ── View switching ─────────────────────────────────────
 let currentCounty = null;
-let currentMode = 'normal'; // 'normal' | 'challenge'
+let currentMode = 'normal';   // county detail mode
+let mainMode = 'normal';      // main view mode
+
+function setMainMode(mode) {
+  mainMode = mode;
+  document.getElementById('main-toggle-normal').classList.toggle('active', mode === 'normal');
+  document.getElementById('main-toggle-challenge').classList.toggle('active', mode === 'challenge');
+  const stats = loadStats();
+  buildSummary(stats, mode);
+  buildCountyGrid(stats, mode);
+  buildTracker(stats, mode);
+}
+
+function buildTracker(stats, mode) {
+  const known = countKnownTowns(stats, mode);
+  const pct = Math.round(known / KNOWN_TOWNS_TOTAL * 100);
+  const tracker = document.getElementById('town-tracker');
+  const gameCountMap = mode === 'challenge' ? (stats.challengeGameCount || {}) : (stats.countyGameCount || {});
+  if (Object.keys(gameCountMap).length === 0) {
+    tracker.style.display = 'none';
+    return;
+  }
+  tracker.style.display = 'block';
+  document.getElementById('tracker-label').textContent = `${known} of ${KNOWN_TOWNS_TOTAL} Maine towns`;
+  document.getElementById('tracker-bar').style.width = pct + '%';
+}
 
 function showMain() {
   document.getElementById('main-view').style.display = 'flex';
@@ -534,9 +641,8 @@ async function showCounty(county) {
   const stats = loadStats();
   const unlocked = (stats.unlockedCounties || []).includes(county);
 
-  // Show toggle only if challenge data exists
-  const hasChallenge = (stats.challengeGames || {})[county]?.length > 0 || (stats.challengeBest || {})[county] !== undefined;
-  document.getElementById('cv-toggle').style.display = hasChallenge ? 'flex' : 'none';
+  // Show toggle only if challenge mode is unlocked for this county
+  document.getElementById('cv-toggle').style.display = unlocked ? 'flex' : 'none';
 
   document.getElementById('cv-title').textContent = county + ' County';
 
@@ -604,13 +710,14 @@ function buildGameChart(games) {
 
   const data = games.map((game, i) => {
     const answers = gameAnswers(game);
+    if (!answers.length) return null;
     const correct = answers.filter(a => a.correct).length;
     const pct = Math.round((correct / answers.length) * 100);
     const label = game.ts
       ? new Date(game.ts).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
       : `Game ${i + 1}`;
     return { pct, label };
-  });
+  }).filter(Boolean);
 
   const titleDiv = document.createElement('div');
   titleDiv.className = 'detail-section-title';
@@ -797,16 +904,25 @@ function showLabel(d, townMap) {
 
 // ── Init ───────────────────────────────────────────────
 const stats = loadStats();
-buildSummary(stats);
-buildCountyGrid(stats);
+if ((stats.unlockedCounties || []).length > 0) {
+  document.getElementById('main-toggle').style.display = 'flex';
+}
+buildSummary(stats, mainMode);
+buildCountyGrid(stats, mainMode);
+buildTracker(stats, mainMode);
 </script>
-<style>.site-footer a:hover { color: var(--gold); }</style>
+<style>
+  .site-footer a { font-family: 'Crimson Pro', Georgia, serif; font-size: 1.1rem; color: var(--parchment); text-decoration: none; }
+  .site-footer a:hover { color: var(--gold); }
+  .site-footer .sep { color: #a0b4c8; }
+</style>
 <footer class="site-footer" style="margin-top: auto; padding: 28px 0 16px; text-align: center; width: 100%;">
-  <nav style="display: flex; justify-content: center; gap: 20px;">
-    <a href="index.html" style="font-family: 'Crimson Pro', Georgia, serif; font-size: 0.9rem; color: var(--parchment); text-decoration: none;">Play</a>
-    <a href="about.html" style="font-family: 'Crimson Pro', Georgia, serif; font-size: 0.9rem; color: var(--parchment); text-decoration: none;">About</a>
-    <a href="stats.html" style="font-family: 'Crimson Pro', Georgia, serif; font-size: 0.9rem; color: var(--parchment); text-decoration: none;">Progress</a>
-    <a href="https://github.com/iamtfc/maine-town-quiz/issues/new" target="_blank" rel="noopener" style="font-family: 'Crimson Pro', Georgia, serif; font-size: 0.9rem; color: var(--parchment); text-decoration: none;">Report a Bug</a>
+  <nav style="display: flex; justify-content: center; align-items: center; gap: 12px;">
+    <a href="about.html">About</a>
+    <span class="sep">·</span>
+    <a href="stats.html">Progress</a>
+    <span class="sep">·</span>
+    <a href="https://github.com/iamtfc/maine-town-quiz/issues/new" target="_blank" rel="noopener">Report a Bug</a>
   </nav>
 </footer>
 </body>

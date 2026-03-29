@@ -58,14 +58,19 @@ Filtering logic is duplicated across `index.html`, `maine-quiz-image.html`, and 
 All stats stored under key `maineQuizStats`. Structure:
 ```
 {
-  countyBest: { [county]: pct },         // normal mode best %
-  countyGames: { [county]: [...] },      // normal mode game history (last 5)
-  challengeBest: { [county]: pct },      // challenge mode best %
-  challengeGames: { [county]: [...] },   // challenge mode game history (last 5)
-  townStats: { [town]: { seen, correct } }
+  countyBest: { [county]: pct },              // normal mode best % (ever, never decreases)
+  countyGames: { [county]: [...] },           // normal mode game history (last 10)
+  countyGameCount: { [county]: N },           // accurate total games played (not capped)
+  challengeBest: { [county]: pct },           // challenge mode best %
+  challengeGames: { [county]: [...] },        // challenge mode game history (last 10)
+  challengeGameCount: { [county]: N },        // accurate total challenge games played
+  unlockedCounties: [county, ...],            // counties where normal best = 100%; gates Challenge Mode
+  challengeUnlockedCounties: [county, ...],   // counties where challenge best = 100%; gates future features
 }
 ```
 Game records: `{ ts: Date.now(), answers: [{ town, correct }] }`. Old records (flat arrays) handled via `gameAnswers(game)` helper: `game.answers || game`.
+
+Town accuracy for the progress tracker is computed on-the-fly from game records (not stored separately).
 
 ## GeoJSON data notes
 

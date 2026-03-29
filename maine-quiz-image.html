@@ -342,7 +342,18 @@ function loadStats() {
   catch(e) { return { countyBest: {}, countyGames: {}, challengeBest: {}, challengeGames: {} }; }
 }
 function saveStats(stats) {
-  try { localStorage.setItem(STATS_KEY, JSON.stringify(stats)); } catch(e) {}
+  try {
+    localStorage.setItem(STATS_KEY, JSON.stringify(stats));
+  } catch(e) {
+    // If save fails (e.g. quota exceeded), retry without derived town stats.
+    // Game records, scores, and unlock status are preserved.
+    try {
+      const safe = Object.assign({}, stats);
+      delete safe.townStats;
+      delete safe.challengeTownStats;
+      localStorage.setItem(STATS_KEY, JSON.stringify(safe));
+    } catch(e2) {}
+  }
 }
 function recordAnswer(town, correct) {
   currentGameAnswers.push({ town, correct });
@@ -357,6 +368,10 @@ function finalizeGame(county, pct) {
   if (stats.challengeGames[county].length > 10) stats.challengeGames[county].shift();
   stats.challengeGameCount[county] = (stats.challengeGameCount[county] || 0) + 1;
   if (pct > (stats.challengeBest[county] || 0)) stats.challengeBest[county] = pct;
+  if (pct === 100) {
+    if (!stats.challengeUnlockedCounties) stats.challengeUnlockedCounties = [];
+    if (!stats.challengeUnlockedCounties.includes(county)) stats.challengeUnlockedCounties.push(county);
+  }
   saveStats(stats);
   currentGameAnswers = [];
 }
@@ -764,13 +779,18 @@ buildPickerMap().then(() => {
 });
 loadAllTowns();
 </script>
-<style>.site-footer a:hover { color: var(--gold); }</style>
+<style>
+  .site-footer a { font-family: 'Crimson Pro', Georgia, serif; font-size: 1.1rem; color: var(--parchment); text-decoration: none; }
+  .site-footer a:hover { color: var(--gold); }
+  .site-footer .sep { color: #a0b4c8; }
+</style>
 <footer class="site-footer" style="margin-top: auto; padding: 28px 0 16px; text-align: center; width: 100%;">
-  <nav style="display: flex; justify-content: center; gap: 20px;">
-    <a href="index.html" style="font-family: 'Crimson Pro', Georgia, serif; font-size: 0.9rem; color: var(--parchment); text-decoration: none;">Play</a>
-    <a href="about.html" style="font-family: 'Crimson Pro', Georgia, serif; font-size: 0.9rem; color: var(--parchment); text-decoration: none;">About</a>
-    <a href="stats.html" style="font-family: 'Crimson Pro', Georgia, serif; font-size: 0.9rem; color: var(--parchment); text-decoration: none;">Progress</a>
-    <a href="https://github.com/iamtfc/maine-town-quiz/issues/new" target="_blank" rel="noopener" style="font-family: 'Crimson Pro', Georgia, serif; font-size: 0.9rem; color: var(--parchment); text-decoration: none;">Report a Bug</a>
+  <nav style="display: flex; justify-content: center; align-items: center; gap: 12px;">
+    <a href="about.html">About</a>
+    <span class="sep">·</span>
+    <a href="stats.html">Progress</a>
+    <span class="sep">·</span>
+    <a href="https://github.com/iamtfc/maine-town-quiz/issues/new" target="_blank" rel="noopener">Report a Bug</a>
   </nav>
 </footer>
 </body>
