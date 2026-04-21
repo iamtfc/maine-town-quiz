@@ -29,6 +29,7 @@
     flex-direction: column;
     align-items: center;
     padding: 16px;
+    padding-bottom: max(16px, env(safe-area-inset-bottom));
   }
 
   .back-link {
@@ -42,7 +43,7 @@
     background: none;
     border: none;
     font-family: inherit;
-    padding: 0;
+    padding: 8px 0;
   }
   .back-link:hover { color: var(--gold); }
 
@@ -91,7 +92,7 @@
   }
 
   .summary-stat .lbl {
-    font-size: 0.7rem;
+    font-size: 0.75rem;
     text-transform: uppercase;
     letter-spacing: 0.08em;
     color: #a0b4c8;
@@ -113,8 +114,8 @@
   /* ── County grid ──────────────────────────────────── */
   .county-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-    gap: 8px;
+    grid-template-columns: repeat(auto-fill, minmax(148px, 1fr));
+    gap: 10px;
     width: 100%;
     max-width: 520px;
     margin-bottom: 36px;
@@ -124,7 +125,7 @@
     background: var(--ocean);
     border: 2px solid #2a4a6c;
     border-radius: 8px;
-    padding: 12px 10px;
+    padding: 14px 12px;
     text-align: center;
     position: relative;
     cursor: pointer;
@@ -140,7 +141,7 @@
 
   .county-card .county-name {
     font-family: 'Playfair Display', Georgia, serif;
-    font-size: 0.9rem;
+    font-size: clamp(0.9rem, 2.5vw, 1rem);
     color: var(--parchment);
     margin-bottom: 6px;
     line-height: 1.2;
@@ -155,12 +156,12 @@
   }
 
   .county-card .county-games {
-    font-size: 0.75rem;
+    font-size: 0.8rem;
     color: #a0b4c8;
   }
 
   .county-card .county-review {
-    font-size: 0.75rem;
+    font-size: 0.8rem;
     color: #a0b4c8;
     margin-top: 2px;
   }
@@ -324,7 +325,7 @@
   .btn {
     display: inline-block;
     margin-top: 16px;
-    padding: 10px 28px;
+    padding: 14px 28px;
     font-family: 'Playfair Display', Georgia, serif;
     font-size: 1rem;
     font-weight: 700;
