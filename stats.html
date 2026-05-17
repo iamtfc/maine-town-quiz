@@ -575,7 +575,7 @@ function buildCountyGrid(stats, mode) {
   const gameCountMap = isChallenge ? (stats.challengeGameCount || {}) : (stats.countyGameCount || {});
   const unlocked = new Set(stats.unlockedCounties || []);
   const challengePerfected = new Set(stats.challengeUnlockedCounties || []);
-  const srMap = !isChallenge ? (stats.srData || {}) : {};
+  const srMap = isChallenge ? (stats.challengeSrData || {}) : (stats.srData || {});
   document.getElementById('county-grid').innerHTML = COUNTIES.map(county => {
     const best = bestMap[county];
     const gameCount = (gameCountMap[county]) || (gamesMap[county] || []).length;
@@ -608,10 +608,10 @@ function buildCountyGrid(stats, mode) {
 function buildReviewCta(stats, mode) {
   const cta = document.getElementById('review-cta');
   const btn = document.getElementById('review-btn');
-  if (mode !== 'normal') { cta.style.display = 'none'; btn.style.display = 'none'; return; }
-  const srMap = stats.srData || {};
-  const gamesMap = stats.countyGames || {};
-  const gameCountMap = stats.countyGameCount || {};
+  const isChallenge = mode === 'challenge';
+  const srMap = isChallenge ? (stats.challengeSrData || {}) : (stats.srData || {});
+  const gamesMap = isChallenge ? (stats.challengeGames || {}) : (stats.countyGames || {});
+  const gameCountMap = isChallenge ? (stats.challengeGameCount || {}) : (stats.countyGameCount || {});
   const candidates = COUNTIES
     .filter(c => (gameCountMap[c] || (gamesMap[c] || []).length) >= 2)
     .map(c => ({ county: c, nextReview: srMap[c] ? srMap[c].nextReview : 0 }))
@@ -620,7 +620,9 @@ function buildReviewCta(stats, mode) {
   const next = candidates[0];
   const daysUntil = Math.ceil((next.nextReview - Date.now()) / 86400000);
   btn.style.display = 'inline-block';
-  btn.href = `index.html?county=${encodeURIComponent(next.county)}`;
+  btn.href = isChallenge
+    ? `maine-quiz-image.html?county=${encodeURIComponent(next.county)}`
+    : `index.html?county=${encodeURIComponent(next.county)}`;
   cta.style.display = 'block';
   if (daysUntil <= 0) {
     const dueCount = candidates.filter(c => Math.ceil((c.nextReview - Date.now()) / 86400000) <= 0).length;
